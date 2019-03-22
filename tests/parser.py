@@ -5,7 +5,7 @@ import re
 class ParserTestSuite(unittest.TestCase):
     def __init__(self, methodName):
         self._parser = parser.QuestionParser()
-        return super().__init__(methodName)
+        super().__init__(methodName)
 
 
     def test_weather_for_one_word_city_names(self):

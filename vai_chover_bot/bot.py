@@ -17,7 +17,7 @@ class WeatherBot(telepot.Bot):
         self._weather_api = WeatherAPI(open_weather_token)
         self._question_parser = QuestionParser()
 
-        return super().__init__(telegram_token)
+        super().__init__(telegram_token)
 
 
     def _getAnswer(self, question_type: QuestionType, city) -> str:
