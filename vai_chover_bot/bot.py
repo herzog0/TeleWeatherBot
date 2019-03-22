@@ -29,9 +29,9 @@ class Bot(telepot.Bot):
             return self._getAnswer(type, *args)
 
         except NotUnderstandable:
-            return 'Desculpe, não consegui entender o que disse'
+            return 'Putz, não consegui entender o que disse'
         except NotFoundError:
-            return 'Desculpe, não conheço essa cidade'
+            return 'Vixi, não conheço essa cidade'
 
 
 
