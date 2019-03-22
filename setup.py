@@ -9,7 +9,7 @@ with open('README.md') as f:
 
 setup(
     name             = 'vai_chover_bot',
-    version          = '0.1.0',
+    version          = '0.1.5',
     description      = 'Bot para o Telegram com funcionalidades especiais relacionadas ao clima local dx usuárix.',
     long_description = readme,
     author           = ', '.join(author[0] for author in authors),
