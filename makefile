@@ -1,5 +1,5 @@
 build: install_req
-	python -c "import bot"
+	python -c "import vai_chover_bot"
 
 install: install_req
 	pip install .
@@ -7,3 +7,5 @@ install: install_req
 install_req:
 	pip install -r requirements.txt
 
+test:
+	nosetests tests
