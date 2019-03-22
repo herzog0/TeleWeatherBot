@@ -1,5 +1,5 @@
-from weather import WeatherAPI, NotFoundError
-from parser import get_city
+from .weather import WeatherAPI, NotFoundError
+from .parser import get_city
 
 import telepot
 from telepot.loop import MessageLoop
