@@ -1,2 +1,6 @@
-from .question import QuestionType, NotUnderstandable
+"""
+Parser das questões do usuário
+"""
+
+from .question import QuestionType, CouldNotUnderstandException
 from .parser import QuestionParser

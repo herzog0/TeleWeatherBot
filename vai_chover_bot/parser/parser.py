@@ -1,34 +1,62 @@
-from .question import QuestionType, NotUnderstandable
+"""
+O parser propriamente
+"""
 
+from .question import QuestionType, CouldNotUnderstandException
 import string
 
-def get_city(words: list) -> str:
-    city = ' '.join(map(lambda s: s.capitalize(), words))
-    return city.strip(string.punctuation)
+
+def join_city_name(words: list) -> str:
+    """Junta um lista de palavras em um nome de uma cidade"""
+    # primeiro capitaliza cada palavra
+    words = [word.capitalize() for word in words]
+    # junta em uma só
+    city = ' '.join(words)
+    # e remove possíveis pontuações
+    city = city.strip(string.punctuation)
+
+    return city
+
 
 class QuestionParser:
-    def parse(self, text: str) -> str:
+    """Parser das entradas dos usuários"""
+    # TODO: usar estado interno, talvez com o NLTK
+
+    def parse(self, text: str) -> tuple:
+        """Tentar ler a questão do usuário e decidir seu tipo e o que precisa para respondê-lo"""
+
         words = text.lower().split()
+
+        # uma ou duas palavras só pode ser o nome da cidade
+        # descriçao do tempo
         if 1 <= len(words) <= 2:
-            return QuestionType.WEATHER, [get_city(words)]
+            return QuestionType.WEATHER, [join_city_name(words)]
 
+        # como está [CIDADE](?)
+        # descriçao do tempo
         elif words[:3] == ['como', 'está']:
-            return QuestionType.WEATHER, [get_city(words[3:])]
+            return QuestionType.WEATHER, [join_city_name(words[3:])]
 
+        # está chuvendo em [CIDADE](?)
+        # teste de chuva
         elif words[:3] == ['está', 'chuvendo', 'em']:
-            return QuestionType.IS_RAINY, [get_city(words[3:])]
+            return QuestionType.IS_RAINY, [join_city_name(words[3:])]
 
         elif words[0] == 'quão':
             if words[1] == 'quente' or words[1] == 'frio':
+                # quão [quente|frio] está em [CIDADE](?)
+                # temperatura média
                 if words[2] == 'está':
                     if words[3] == 'em':
-                        return QuestionType.TEMPERATURE, [get_city(words[4:])]
+                        return QuestionType.TEMPERATURE, [join_city_name(words[4:])]
                     else:
-                        return QuestionType.TEMPERATURE, [get_city(words[3:])]
+                        return QuestionType.TEMPERATURE, [join_city_name(words[3:])]
+                # quão [quente|frio] pode ficar em [CIDADE](?)
+                # limites de temperatura
                 elif words[2] == 'pode':
                     if words[3] == 'ficar':
                         if words[4] == 'em':
-                            return QuestionType.TEMP_VARIATION, [get_city(words[5:])]
+                            return QuestionType.TEMP_VARIATION, [join_city_name(words[5:])]
 
-
-        raise NotUnderstandable(text)
+        # ainda não consegue compreender outras coisas
+        raise CouldNotUnderstandException(text)
