@@ -15,5 +15,5 @@ setup(
     author           = ', '.join(author[0] for author in authors),
     author_email     = ', '.join(author[1] for author in authors),
     url              = 'https://gitlab.com/teobmendes/vai_chover_bot',
-    packages         = find_packages(exclude=('tests', 'docs', 'main'))
+    packages         = find_packages(exclude=('tests', 'docs'))
 )
