@@ -14,12 +14,33 @@ class Bot(telepot.Bot):
 
 
     def _getWeather(self, city: str) -> str:
-        weather = self._weather_api.getWeather(city)
+        weather = self._weather_api.getWeatherDescription(city)
         return f'Parece estar {weather} em {city}'
+
+    def _getTemperature(self, city: str) -> str:
+        temp = self._weather_api.getTemperature(city)
+        return f'Acho que tá {temp:.1f}°C  lá em {city}'
+
+    def _getTempVariation(self, city: str) -> str:
+        t_min, t_max = self._weather_api.getTempVariation(city)
+        if t_min != t_max:
+            return f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
+        else:
+            return f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+
+    def _isRainy(self, city: str) -> str:
+        rainy = self._weather_api.isRainy(city)
+        return f'Tá chovendo em {city} {"sim" if rainy else "não"}'
 
     def _getAnswer(self, question_type: QuestionType, *args) -> str:
         if question_type is QuestionType.WEATHER:
             return self._getWeather(*args)
+        elif question_type is QuestionType.IS_RAINY:
+            return self._isRainy(*args)
+        elif question_type is QuestionType.TEMPERATURE:
+            return self._getTemperature(*args)
+        elif question_type is QuestionType.TEMP_VARIATION:
+            return self._getTempVariation(*args)
         else:
             raise NotUnderstandable
 
