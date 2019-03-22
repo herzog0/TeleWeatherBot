@@ -1,11 +1,18 @@
-build: install_req
-	python -c "import vai_chover_bot"
+PYTHON=python3
+PIP=pip3
 
-install: install_req
-	pip install .
+build: pip.lock
+	$(PYTHON) -c "import vai_chover_bot"
 
-install_req:
-	pip install -r requirements.txt
+install: pip.lock
+	$(PIP) install .
+
+pip.lock: requirements.txt
+	$(PIP) install -r requirements.txt
+	touch pip.lock
+
+run: build
+	$(PYTHON) run.py
 
 test:
 	nosetests tests
