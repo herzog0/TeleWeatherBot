@@ -1,8 +1,13 @@
+from .question import QuestionType, NotUnderstandable
+
 import string
 
 
-def get_city(text: str):
-    city = text.split()[-1]
-    city = city.strip(string.punctuation)
+class QuestionParser:
+    def parse(self, text: str) -> str:
+        text = text.split()
+        if len(text) == 1:
+            city = text[0].strip(string.punctuation)
+            return QuestionType.WEATHER, [city]
 
-    return city
+        raise NotUnderstandable(text)
