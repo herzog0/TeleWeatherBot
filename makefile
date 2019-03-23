@@ -1,42 +1,50 @@
 PYTHON := python3
 PIP    := pip3
+LIB    := vai_chover_bot
 
 #########################
 # arquivos e diretórios #
-LIB_DIR   := $(shell basename $(shell pwd))
+LIB_DIR   := $(LIB)
 LIB_FILES := $(shell ls $(LIB_DIR)/*.py $(LIB_DIR)/*/*.py)
 
 TEST_DIR   := tests
 TEST_FILES := $(shell ls $(TEST_DIR)/*.py)
 
+#######################################
+# simplificando as chaves de controle #
+LIBRARY      := .lib.lock
+REQUIREMENTS := .pip.lock
+TESTS        := .tests.lock
+
+
 ###################
 # funções básicas #
 .PHONY: build
-build: .lib.lock
+build: $(LIBRARY)
 
 .PHONY: install
-install: .lib.lock
+install: $(LIBRARY)
 	@$(PIP) install .
 
 .PHONY: run
 run: build
-	@$(PYTHON) run.py
+	@$(PYTHON) -m $(LIB)
 
 .PHONY: test test
 test: tests
-tests: .tests.lock
+tests: $(TESTS)
 
 ######################
 # chaves de controle #
-.pip.lock: requirements.txt
+$(REQUIREMENTS): requirements.txt
 	@$(PIP) install -r $<
-	@touch .pip.lock
+	@touch $@
 
-.lib.lock: .pip.lock $(LIB_FILES)
+$(LIBRARY): $(REQUIREMENTS) $(LIB_FILES)
 	@echo Building lib...
 	@$(PYTHON) -c "import $(LIB_DIR)"
-	@touch .lib.lock
+	@touch $@
 
-.tests.lock: .lib.lock $(TEST_FILES)
+$(TESTS): $(LIBRARY) $(TEST_FILES)
 	@nosetests $(TEST_DIR)
-	@touch .tests.lock
+	@touch $@
