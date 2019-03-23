@@ -12,10 +12,10 @@ TEST_FILES := $(shell ls $(TEST_DIR)/*.py)
 ###################
 # funções básicas #
 .PHONY: build
-build: lib
+build: .lib.lock
 
 .PHONY: install
-install: requirements
+install: .lib.lock
 	@$(PIP) install .
 
 .PHONY: run
@@ -24,26 +24,19 @@ run: build
 
 .PHONY: test test
 test: tests
-tests: lib tests.lock
-
-###################
-# intermediadores #
-.PHONY: lib
-lib: lib.lock
-
-.PHONY: requirements
-requirements: pip.lock
+tests: .tests.lock
 
 ######################
 # chaves de controle #
-pip.lock: requirements.txt
-	@$(PIP) install -r requirements.txt
-	@touch pip.lock
+.pip.lock: requirements.txt
+	@$(PIP) install -r $<
+	@touch .pip.lock
 
-lib.lock: requirements $(LIB_FILES)
+.lib.lock: .pip.lock $(LIB_FILES)
+	@echo Building lib...
 	@$(PYTHON) -c "import $(LIB_DIR)"
-	@touch lib.lock
+	@touch .lib.lock
 
-tests.lock: $(TEST_FILES)
+.tests.lock: .lib.lock $(TEST_FILES)
 	@nosetests $(TEST_DIR)
-	@touch tests.lock
+	@touch .tests.lock
