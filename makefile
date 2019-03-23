@@ -28,7 +28,7 @@ install: $(LIBRARY)
 
 .PHONY: run
 run: build
-	@$(PYTHON) -m $(LIB)
+	@$(PYTHON) -O -m $(LIB)
 
 .PHONY: test test
 test: tests
@@ -42,7 +42,7 @@ $(REQUIREMENTS): requirements.txt
 
 $(LIBRARY): $(REQUIREMENTS) $(LIB_FILES)
 	@echo Building lib...
-	@$(PYTHON) -c "import $(LIB_DIR)"
+	@$(PYTHON) -O -c "import $(LIB_DIR)"
 	@touch $@
 
 $(TESTS): $(LIBRARY) $(TEST_FILES)
