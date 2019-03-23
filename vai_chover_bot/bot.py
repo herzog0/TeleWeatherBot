@@ -67,7 +67,8 @@ class WeatherBot(telepot.Bot):
             if content_type == 'text':
                 text = msg['text']
                 response = self.parse(text)
-                self.sendMessage(chat_id, response)
+                if response:
+                    self.sendMessage(chat_id, response)
 
         return callback
 
