@@ -34,8 +34,8 @@ class QuestionParser:
 
         # como está [CIDADE](?)
         # descriçao do tempo
-        elif words[:3] == ['como', 'está']:
-            return QuestionType.WEATHER, [join_city_name(words[3:])]
+        elif words[:2] == ['como', 'está']:
+            return QuestionType.WEATHER, [join_city_name(words[2:])]
 
         # está chuvendo em [CIDADE](?)
         # teste de chuva
