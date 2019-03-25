@@ -1,6 +1,6 @@
 PYTHON := python3
-# PYTHON := pypy3
 PIP    := $(PYTHON) -m pip
+TESTER := $(PYTHON) -m nose
 LIB    := vai_chover_bot
 
 #########################
@@ -38,6 +38,7 @@ run: $(LIBRARY)
 
 .PHONY: tests
 tests: $(TESTS)
+	@echo All tests passed
 
 
 ###########################
@@ -73,5 +74,5 @@ $(LIBRARY): $(REQUIREMENTS) $(LIB_FILES)
 	@touch $@
 
 $(TESTS): $(LIBRARY) $(TEST_FILES)
-	@nosetests $(TEST_DIR)
+	@$(TESTER) $(TEST_DIR)
 	@touch $@

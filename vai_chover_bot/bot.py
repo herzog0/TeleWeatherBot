@@ -58,7 +58,6 @@ class WeatherBot(telepot.Bot):
             return 'Vixi, não conheço essa cidade'
 
 
-
     def _genHandler(self) -> callable:
         """Gerador das callbacks para tratar as mensagens do bot"""
         def callback(msg):
