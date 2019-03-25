@@ -1,14 +1,17 @@
 PYTHON := python3
-PIP    := pip3
+# PYTHON := pypy3
+PIP    := $(PYTHON) -m pip
 LIB    := vai_chover_bot
 
 #########################
 # arquivos e diretórios #
 LIB_DIR   := $(LIB)
-LIB_FILES := $(shell ls $(LIB_DIR)/*.py $(LIB_DIR)/*/*.py)
+LIB_FILES := $(shell find $(LIB_DIR) -name "*.py")
+LIB_CACHE := $(shell find $(LIB_DIR) -name __pycache__)
 
 TEST_DIR   := tests
-TEST_FILES := $(shell ls $(TEST_DIR)/*.py)
+TEST_FILES := $(shell find $(TEST_DIR) -name "*.py")
+TEST_CACHE := $(shell find $(TEST_DIR) -name __pycache__)
 
 #######################################
 # simplificando as chaves de controle #
@@ -19,25 +22,49 @@ TESTS        := .tests.lock
 
 ###################
 # funções básicas #
+.PHONY: all
+all: $(LIBRARY)
+
 .PHONY: build
-build: $(LIBRARY)
+build: clean-lib $(LIBRARY)
 
 .PHONY: install
 install: $(LIBRARY)
-	@$(PIP) install .
+	@$(PIP) install --user .
 
 .PHONY: run
-run: build
+run: $(LIBRARY)
 	@$(PYTHON) -O -m $(LIB)
 
-.PHONY: test test
-test: tests
+.PHONY: tests
 tests: $(TESTS)
+
+
+###########################
+# limpando (para refazer) #
+.PHONY: clean
+clean: clean-lib
+
+.PHONY: clean-all
+clean-all: clean-req clean-lib clean-tests
+
+.PHONY: clean-req
+clean-req:
+	@rm -f $(REQUIREMENTS)
+
+.PHONY: clean-lib
+clean-lib:
+	@rm -rf $(LIBRARY) $(LIB_CACHE)
+
+.PHONY: clean-tests
+clean-tests:
+	@rm -rf $(TESTS) $(TEST_CACHE)
+
 
 ######################
 # chaves de controle #
 $(REQUIREMENTS): requirements.txt
-	@$(PIP) install -r $<
+	@$(PIP) install --user -r $<
 	@touch $@
 
 $(LIBRARY): $(REQUIREMENTS) $(LIB_FILES)
