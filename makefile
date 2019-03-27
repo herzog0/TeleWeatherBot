@@ -3,6 +3,7 @@ PYTHON ?= python3
 PIP       := $(PYTHON) -m pip
 TESTER    := $(PYTHON) -m nose
 LIB       := vai_chover_bot
+DOCS_TYPE := html
 
 
 #########################
@@ -15,6 +16,9 @@ TEST_DIR   := tests
 TEST_FILES := $(shell find $(TEST_DIR) -name "*.py" -type f)
 TEST_CACHE := $(shell find $(TEST_DIR) -name __pycache__ -type d)
 
+DOCS_DIR   := docs
+DOCS_FILES := $(shell find $(DOCS_DIR) -iregex "$(DOCS_DIR)/[^_].*")
+
 #######################################
 # simplificando as chaves de controle #
 LIBRARY      := .lib.lock
@@ -22,6 +26,7 @@ REQUIREMENTS := .pip.lock
 DEV_REQS     := .pip.dev.lock
 INSTALL      := .install.lock
 TESTS        := .tests.lock
+DOCS         := .docs.lock
 
 #########################
 # variáveis de ambiente #
@@ -56,6 +61,9 @@ install: $(INSTALL)
 tests: $(TESTS)
 	@echo All tests passed
 
+.PHONY: docs
+docs: $(LIBRARY) $(TESTS) $(DOCS)
+
 
 ###########################
 # limpando (para refazer) #
@@ -63,7 +71,7 @@ tests: $(TESTS)
 clean: clean-lib
 
 .PHONY: clean-all
-clean-all: clean-req clean-lib clean-tests
+clean-all: clean-req clean-lib clean-tests clean-docs
 
 .PHONY: clean-req
 clean-req:
@@ -76,6 +84,10 @@ clean-lib:
 .PHONY: clean-tests
 clean-tests:
 	@rm -rf $(TESTS) $(TEST_CACHE)
+
+.PHONY: clean-docs
+clean-docs:
+	@make -C $(DOCS_DIR) clean
 
 
 ######################
@@ -99,4 +111,8 @@ $(DEV_REQS): requirements-dev.txt $(REQUIREMENTS)
 
 $(TESTS): $(INSTALL) $(TEST_FILES) $(DEV_REQS)
 	@$(TESTER) $(TEST_DIR)
+	@touch $@
+
+$(DOCS): $(LIBRARY) $(TESTS) $(DOCS_FILES)
+	@make -C $(DOCS_DIR) $(DOCS_TYPE)
 	@touch $@
