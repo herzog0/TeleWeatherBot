@@ -1,17 +1,18 @@
-PYTHON := python3
-PIP    := $(PYTHON) -m pip
-TESTER := $(PYTHON) -m nose
-LIB    := vai_chover_bot
+PYTHON = python3
+
+PIP       := $(PYTHON) -m pip
+TESTER    := $(PYTHON) -m nose
+LIB       := vai_chover_bot
 
 #########################
 # arquivos e diretórios #
 LIB_DIR   := $(LIB)
-LIB_FILES := $(shell find $(LIB_DIR) -name "*.py")
-LIB_CACHE := $(shell find $(LIB_DIR) -name __pycache__)
+LIB_FILES := $(shell find $(LIB_DIR) -name "*.py" -type f)
+LIB_CACHE := $(shell find $(LIB_DIR) -name __pycache__ -type d)
 
 TEST_DIR   := tests
-TEST_FILES := $(shell find $(TEST_DIR) -name "*.py")
-TEST_CACHE := $(shell find $(TEST_DIR) -name __pycache__)
+TEST_FILES := $(shell find $(TEST_DIR) -name "*.py" -type f)
+TEST_CACHE := $(shell find $(TEST_DIR) -name __pycache__ -type d)
 
 #######################################
 # simplificando as chaves de controle #
@@ -22,14 +23,14 @@ TESTS        := .tests.lock
 
 ###################
 # funções básicas #
-.PHONY: all
-all: $(LIBRARY)
+.PHONY: lib
+lib: $(LIBRARY)
 
 .PHONY: build
 build: clean-lib $(LIBRARY)
 
 .PHONY: install
-install: $(LIBRARY)
+install:
 	@$(PIP) install --user .
 
 .PHONY: run

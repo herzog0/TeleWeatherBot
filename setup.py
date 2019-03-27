@@ -1,19 +1,24 @@
 from setuptools import setup, find_packages
 
-authors = [
-    ('Tiago de Paula', 'tiagodepalves@gmail.com'),
-]
-
-with open('README.md') as f:
-    readme = f.read()
+import conf
 
 setup(
-    name             = 'vai_chover_bot',
-    version          = '0.1.5',
-    description      = 'Bot para o Telegram com funcionalidades especiais relacionadas ao clima local dx usuárix.',
-    long_description = readme,
-    author           = ', '.join(author[0] for author in authors),
-    author_email     = ', '.join(author[1] for author in authors),
-    url              = 'https://gitlab.com/teobmendes/vai_chover_bot',
-    packages         = find_packages(exclude=('tests', 'docs'))
+    name             = conf.name,
+    version          = conf.release,
+    description      = conf.description,
+    long_description = conf.readme,
+    long_description_content_type = "text/markdown",
+    author           = conf.join_authors(conf.by_name),
+    author_email     = conf.join_authors(conf.by_email),
+    url              = conf.url,
+    packages         = find_packages(exclude=('tests', 'docs')),
+    python_requires  = "~=3.6",
+    install_requires = [
+        "telepot",
+        "pyowm"
+    ],
+    classifiers      = [
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent"
+    ]
 )
