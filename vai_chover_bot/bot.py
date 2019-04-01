@@ -7,6 +7,7 @@ from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
 
 import telepot
 from telepot.loop import MessageLoop
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 class WeatherBot(telepot.Bot):
@@ -67,7 +68,10 @@ class WeatherBot(telepot.Bot):
                 text = msg['text']
                 if text.strip().lower() in ['/start']:
                     response = self.firstMessage(chat_id)
-                    self.sendMessage(chat_id, response)
+                    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text='Press me', callback_data='press')],
+                    ])
+                    self.sendMessage(chat_id, response, reply_markup=keyboard)
                 else:
                     response = self.parse(text)
                     if response:
@@ -76,7 +80,14 @@ class WeatherBot(telepot.Bot):
         return callback
     
     def firstMessage(self, chat_id):
-        return 'Você está iniciando o TeleWeatherBot!! Bem vindo.'
+        message = """
+            Olá!!
+            Você está iniciando o TeleWeatherBot!! Bem vindo!!
+            Use os seguintes comandos para me pedir algo:
+                /help -> lista de comandos disponíveis
+                /clima <Cidade> -> falar como está o clima da Cidade no momento
+        """
+        return message
 
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
