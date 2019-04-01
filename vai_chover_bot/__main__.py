@@ -5,8 +5,10 @@ from . import WeatherBot
 # telegram_token = '822196045:AAFc0D070aSIBmlWW3-PZT9efvcrHMi_1hk'
 ## TOKEN DO PeppaTest
 # telegram_token = '811861359:AAED0Cm5j0c1D_hMkUbBTNJU-bIMfa3EcRo'
+## TOKEN DO TestandoPeterbot
+telegram_token = '848892533:AAEBo2WGuR6CrGxJriHqnP2WgWdS09Wxk2Q'
 ## TOKEN DO TeleWeather
-telegram_token = '609279282:AAGSejkH6fvq4iVY2wjohK0dLl-3MN5Ry-0'
+#telegram_token = '609279282:AAGSejkH6fvq4iVY2wjohK0dLl-3MN5Ry-0'
 
 open_weather_token = '2a6a25c487d5b3c8b34d9bc0ea1909f3'
 

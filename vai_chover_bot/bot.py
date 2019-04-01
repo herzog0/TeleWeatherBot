@@ -65,11 +65,18 @@ class WeatherBot(telepot.Bot):
 
             if content_type == 'text':
                 text = msg['text']
-                response = self.parse(text)
-                if response:
+                if text.strip().lower() in ['/start']:
+                    response = self.firstMessage(chat_id)
                     self.sendMessage(chat_id, response)
+                else:
+                    response = self.parse(text)
+                    if response:
+                        self.sendMessage(chat_id, response)
 
         return callback
+    
+    def firstMessage(self, chat_id):
+        return 'Você está iniciando o TeleWeatherBot!! Bem vindo.'
 
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
