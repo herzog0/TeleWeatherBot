@@ -1,4 +1,12 @@
 from . import WeatherBot
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
+cred = credentials.Certificate("../database/vai-chover-bot-firebase-adminsdk-jqxyn-df2b6d5553.json")
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 
 ## TOKEN DO MarmisTeste
