@@ -6,7 +6,7 @@ class User(object):
 
     @staticmethod
     def from_dict(source):
-        user = User(source[u'name'], source[u'cellphone'])
+        user = User(source['name'], source['cellphone'])
 
         return user
 
@@ -19,5 +19,5 @@ class User(object):
         return dest
 
     def __repr__(self):
-        return u'City(name={}, cellphone={})'.format(
+        return u'User(name={}, cellphone={})'.format(
             self.name, self.cellphone)
