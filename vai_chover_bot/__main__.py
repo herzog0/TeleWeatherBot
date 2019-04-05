@@ -10,5 +10,5 @@ try:
     bot = WeatherBot(telegram_token, open_weather_token)
     bot.run_forever()
 
-except KeyError as err:
-    print('Variável não encontrada:', err, file=sys.stderr)
+except KeyError as key:
+    print('Variável não encontrada:', key, file=sys.stderr)
