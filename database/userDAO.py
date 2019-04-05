@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
+
 import user
 
 class UserDAO(object):
@@ -26,3 +27,4 @@ class UserDAO(object):
     def delete(self, cellphone):
         db = firestore.client()
         db.collection(u'users').document(cellphone).delete()
+

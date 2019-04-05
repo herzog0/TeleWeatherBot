@@ -7,7 +7,7 @@ class User(object):
     @staticmethod
     def from_dict(source):
         user = User(source[u'name'], source[u'cellphone'])
-        
+
         return user
 
     def to_dict(self):
