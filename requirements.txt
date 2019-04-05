@@ -1,3 +1,4 @@
 telepot
 pyowm
 nose
+firebase_admin
