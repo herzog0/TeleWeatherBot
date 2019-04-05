@@ -23,7 +23,7 @@ export TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
 export OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
 ```
 
-Ou fazendo um arquivo `.env` do seguinte modo:
+Ou fazendo um arquivo `.env` com o seguinte conteúdo:
 
 ```dotenv
 TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
@@ -36,6 +36,8 @@ E, só então, podemos rodar o bot com:
 make run
 ```
 
+Obs: note que os tokens utilizados aqui são falsos, servindo apenas como exemplo.
+
 ### Build
 
 ```bash
@@ -46,7 +48,7 @@ Isso instala as dependências pelo `pip` e compila o byte code para próximas ex
 
 ## Desenvolvimento
 
-Para as funções de desenvolvimento, a instalação local do bot é necessária, porém essa etapa já executada sempre que preciso.
+Para as funções de desenvolvimento, a instalação local do bot é necessária, porém essa etapa já é executada sempre que preciso.
 
 ### Testes
 
