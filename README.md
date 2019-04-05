@@ -14,22 +14,6 @@ Para tanto, usamos a [Open Weather Map](https://openweathermap.org/), API aberta
 
 ## Execução
 
-### Build
-
-```bash
-make
-```
-
-Isso instala as dependências pelo `pip` e compila o byte code para próximas execuções (apesar não ser necessário).
-
-### Instalação
-
-Parte opcional, mas deixa a biblioteca utilizável em outros códigos.
-
-```bash
-make install
-```
-
 ### Rodando
 
 Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api). Essa variáveis serão recuperadas do ambiente com os nomes `TELEGRAM_TOKEN` e `OWM_TOKEN`. Elas podem ser marcadas com:
@@ -50,6 +34,30 @@ E, só então, podemos rodar o bot com:
 
 ```bash
 make run
+```
+
+### Build
+
+```bash
+make
+```
+
+Isso instala as dependências pelo `pip` e compila o byte code para próximas execuções (apesar não ser necessário). Essa etapa não é necessária, já que `make run` já executa o build.
+
+## Desenvolvimento
+
+Para as funções de desenvolvimento, a instalação local do bot é necessária, porém essa etapa já executada sempre que preciso.
+
+### Testes
+
+```bash
+make tests
+```
+
+### Instalação
+
+```bash
+make install
 ```
 
 ## Próximas funcionalidades

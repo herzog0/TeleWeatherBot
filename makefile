@@ -43,12 +43,14 @@ lib: $(LIBRARY)
 .PHONY: build
 build: clean-lib $(LIBRARY)
 
-.PHONY: install
-install: $(INSTALL)
-
 .PHONY: run
 run: $(LIBRARY)
 	@$(PYTHON) -O -m $(LIB)
+
+##################
+# funções de dev #
+.PHONY: install
+install: $(INSTALL)
 
 .PHONY: tests
 tests: $(TESTS)
