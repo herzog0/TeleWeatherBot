@@ -1,8 +1,9 @@
-PYTHON = python3
+PYTHON ?= python3
 
 PIP       := $(PYTHON) -m pip
 TESTER    := $(PYTHON) -m nose
 LIB       := vai_chover_bot
+
 
 #########################
 # arquivos e diretórios #
@@ -18,24 +19,38 @@ TEST_CACHE := $(shell find $(TEST_DIR) -name __pycache__ -type d)
 # simplificando as chaves de controle #
 LIBRARY      := .lib.lock
 REQUIREMENTS := .pip.lock
+DEV_REQS     := .pip.dev.lock
+INSTALL      := .install.lock
 TESTS        := .tests.lock
+
+#########################
+# variáveis de ambiente #
+DOTENV ?= .env
+include $(DOTENV)
+export
+
+$(DOTENV):
+	@touch $@
 
 
 ###################
 # funções básicas #
+.DEFAULT_GOAL := lib
+
 .PHONY: lib
 lib: $(LIBRARY)
 
 .PHONY: build
 build: clean-lib $(LIBRARY)
 
-.PHONY: install
-install:
-	@$(PIP) install --user .
-
 .PHONY: run
 run: $(LIBRARY)
 	@$(PYTHON) -O -m $(LIB)
+
+##################
+# funções de dev #
+.PHONY: install
+install: $(INSTALL)
 
 .PHONY: tests
 tests: $(TESTS)
@@ -74,6 +89,14 @@ $(LIBRARY): $(REQUIREMENTS) $(LIB_FILES)
 	@$(PYTHON) -O -c "import $(LIB_DIR)"
 	@touch $@
 
-$(TESTS): $(LIBRARY) $(TEST_FILES)
+$(INSTALL): $(LIBRARY)
+	@$(PIP) install --user .
+	@touch $@
+
+$(DEV_REQS): requirements-dev.txt $(REQUIREMENTS)
+	@$(PIP) install --user -r $<
+	@touch $@
+
+$(TESTS): $(INSTALL) $(TEST_FILES) $(DEV_REQS)
 	@$(TESTER) $(TEST_DIR)
 	@touch $@

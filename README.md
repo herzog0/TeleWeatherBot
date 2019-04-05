@@ -1,7 +1,6 @@
-vai_chover_bot
-==============
+# vai_chover_bot
 
-Bot para o Telegram com funcionalidades especiais relacionadas ao clima local dx usuárix.
+Bot para o [Telegram](https://telegram.org/) com funcionalidades especiais relacionadas ao clima local dx usuárix.
 
 ## Objetivo
 
@@ -13,7 +12,58 @@ Boa parte das pessoas hoje possuem um smartphone e neste ao menos um aplicativo 
 
 Para tanto, usamos a [Open Weather Map](https://openweathermap.org/), API aberta para consultas sobre o clima.
 
+## Execução
+
+### Rodando
+
+Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api). Essa variáveis serão recuperadas do ambiente com os nomes `TELEGRAM_TOKEN` e `OWM_TOKEN`. Elas podem ser marcadas com:
+
+```bash
+export TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
+export OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
+```
+
+Ou fazendo um arquivo `.env` com o seguinte conteúdo:
+
+```dotenv
+TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
+OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
+```
+
+E, só então, podemos rodar o bot com:
+
+```bash
+make run
+```
+
+Obs: note que os tokens utilizados aqui são falsos, servindo apenas como exemplo.
+
+### Build
+
+```bash
+make
+```
+
+Isso instala as dependências pelo `pip` e compila o byte code para próximas execuções (apesar não ser necessário). Essa etapa não é necessária, já que `make run` já executa o build.
+
+## Desenvolvimento
+
+Para as funções de desenvolvimento, a instalação local do bot é necessária, porém essa etapa já é executada sempre que preciso.
+
+### Testes
+
+```bash
+make tests
+```
+
+### Instalação
+
+```bash
+make install
+```
+
 ## Próximas funcionalidades
-  - Previsão do tempo
-  - Agendamento de tarefas que dependem do clima
-  - Alerta de mudanças bruscas no clima.
+
+- Previsão do tempo
+- Agendamento de tarefas que dependem do clima
+- Alerta de mudanças bruscas no clima.
