@@ -1,8 +1,9 @@
-PYTHON = python3
+PYTHON ?= python3
 
 PIP       := $(PYTHON) -m pip
 TESTER    := $(PYTHON) -m nose
 LIB       := vai_chover_bot
+
 
 #########################
 # arquivos e diretórios #
@@ -20,9 +21,20 @@ LIBRARY      := .lib.lock
 REQUIREMENTS := .pip.lock
 TESTS        := .tests.lock
 
+#########################
+# variáveis de ambiente #
+DOTENV ?= .env
+include $(DOTENV)
+export
+
+$(DOTENV):
+	@touch $@
+
 
 ###################
 # funções básicas #
+.DEFAULT_GOAL := lib
+
 .PHONY: lib
 lib: $(LIBRARY)
 

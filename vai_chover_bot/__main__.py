@@ -1,15 +1,14 @@
 from . import WeatherBot
+import sys
+import os
 
 
-## TOKEN DO MarmisTeste
-# telegram_token = '822196045:AAFc0D070aSIBmlWW3-PZT9efvcrHMi_1hk'
-## TOKEN DO PeppaTest
-# telegram_token = '811861359:AAED0Cm5j0c1D_hMkUbBTNJU-bIMfa3EcRo'
-## TOKEN DO TeleWeather
-telegram_token = '609279282:AAGSejkH6fvq4iVY2wjohK0dLl-3MN5Ry-0'
+try:
+    telegram_token = os.environ['TELEGRAM_TOKEN']
+    open_weather_token = os.environ['OWM_TOKEN']
 
-open_weather_token = '2a6a25c487d5b3c8b34d9bc0ea1909f3'
+    bot = WeatherBot(telegram_token, open_weather_token)
+    bot.run_forever()
 
-
-bot = WeatherBot(telegram_token, open_weather_token)
-bot.run_forever()
+except KeyError as err:
+    print('Variável não encontrada:', err, file=sys.stderr)
