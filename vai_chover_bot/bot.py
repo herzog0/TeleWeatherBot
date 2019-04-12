@@ -7,6 +7,7 @@ from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
 
 import telepot
 from telepot.loop import MessageLoop
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 class WeatherBot(telepot.Bot):
@@ -16,11 +17,12 @@ class WeatherBot(telepot.Bot):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
         self._question_parser = QuestionParser()
+        self.subscriptionsState = {}
 
         super().__init__(telegram_token)
 
 
-    def _getAnswer(self, question_type: QuestionType, city) -> str:
+    def _getAnswer(self, question_type: QuestionType, city):
         """Busca uma descrição do tempo em uma cidade pela API do OWM e coloca em uma string"""
 
         # testa os tipos de questão já adicionados
@@ -46,7 +48,7 @@ class WeatherBot(telepot.Bot):
         # caso base, questão desconhecida/desentendida
         raise CouldNotUnderstandException
 
-    def parse(self, text: str) -> str:
+    def parse(self, text: str):
         """Parseia a pergunta e a resposta, cuidando com alguns casos de erro também"""
         try:
             type, args = self._question_parser.parse(text)
@@ -57,26 +59,70 @@ class WeatherBot(telepot.Bot):
         except NotFoundError:
             return 'Vixi, não conheço essa cidade'
 
+    def firstMessage(self):
+        message = """
+            Olá!!
+            Você está iniciando o TeleWeatherBot!! Bem vindo!!
+            Use os seguintes comandos para me pedir algo:
+                /help -> lista de comandos disponíveis
+                /cadastro -> efetuar cadastro para poder aproveitar mais as funcionalidades
+                /clima <Cidade> -> falar como está o clima da Cidade no momento
+        """
+        return message
 
-    def _genHandler(self) -> callable:
-        """Gerador das callbacks para tratar as mensagens do bot"""
-        def callback(msg):
-            content_type, _, chat_id = telepot.glance(msg)
+    def cadastrarNome(self, chat_id):
+        return None
 
-            if content_type == 'text':
-                text = msg['text']
+    def cadastrarLocalidade(self, chat_id):
+        return None
+
+    def evaluateSubscription(self, chat_id, text):
+        if not chat_id in self.subscriptionsState:
+            self.subscriptionsState[chat_id] = 'nome'
+            self.sendMessage(chat_id, 'Qual seu nome?')
+            return
+        state = self.subscriptionsState[chat_id]
+        if state == 'nome':
+            self.cadastrarNome(text)
+            self.subscriptionsState[chat_id] = 'localidade'
+            self.sendMessage(chat_id, 'Qual sua atual localidade?')
+        elif state == 'localidade':
+            self.cadastrarLocalidade(text)
+            del self.subscriptionsState[chat_id]
+            self.sendMessage(chat_id, 'Obrigado por se cadastrar!! Aproveite nossas funcionalidades!!')
+
+    def on_callback_query(self, msg):
+        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
+        self.answerCallbackQuery(query_id, text='Got it')
+
+    def start(self, chat_id):
+        initialResponseText = self.firstMessage()
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='Iniciar Cadastro', callback_data='cadastro')],
+            [InlineKeyboardButton(text='Exibir comandos disponíveis', callback_data='comandos')]
+        ])
+        self.sendMessage(chat_id, initialResponseText, reply_markup=keyboard)
+
+    def on_chat_message(self, msg):
+        content_type, _, chat_id = telepot.glance(msg)
+        if content_type == 'text':
+            text = msg['text']
+            if chat_id in self.subscriptionsState or text.strip().lower() in ['/cadastro']:
+                self.evaluateSubscription(chat_id, text)
+            elif text.strip().lower() in ['/start']:
+                self.start(chat_id)
+            else:
                 response = self.parse(text)
                 if response:
                     self.sendMessage(chat_id, response)
 
-        return callback
-
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
         # TODO: não usar MessageLoop, pq ele ignora o KeyboardInterrupt
-        MessageLoop(self, self._genHandler()).run_forever(*args, **kwargs)
+        #MessageLoop(self, self._genHandler()).run_forever(*args, **kwargs)
+        MessageLoop(self, {'chat': self.on_chat_message, 'callback_query': self.on_callback_query }).run_forever(*args, **kwargs)
 
-    def run_as_thread(self, *args, **kwargs):
-        """Roda o bot em outra thread"""
-        # TODO: também mudar aqui
-        MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
+    # def run_as_thread(self, *args, **kwargs):
+    #     """Roda o bot em outra thread"""
+    #     # TODO: também mudar aqui
+    #     MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
