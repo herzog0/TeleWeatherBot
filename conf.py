@@ -27,7 +27,11 @@ description = "Bot para o Telegram com funcionalidades especiais relacionadas ao
 url = "https://gitlab.com/teobmendes/vai_chover_bot"
 
 authors = [
-    Author("Tiago de Paula Alves", "tiagodepalves@gmail.com")
+    Author("João Hergert", "joaohergert@gmail.com"),
+    Author("João Paulo Penalber", "joao.p.penalber@gmail.com"),
+    Author("Pedro Barros Bastos", "pedro.bbastos123@gmail.com"),
+    Author("Teodoro Bertolozzi", "teobmendes@gmail.com"),
+    Author("Tiago de Paula", "tiagodepalves@gmail.com")
 ]
 
 by_name = lambda author: f'{author.name}'
