@@ -67,3 +67,6 @@ make install
 - Previsão do tempo
 - Agendamento de tarefas que dependem do clima
 - Alerta de mudanças bruscas no clima.
+
+## Arquitetura
+![Arquitetura Vai Chover Bot](https://i.imgur.com/qM6FvJC.png)
