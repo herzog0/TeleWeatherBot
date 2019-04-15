@@ -4,6 +4,7 @@ O bot propriamente
 
 from .weather import WeatherAPI, NotFoundError
 from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
+from .handshake import Handshake
 
 import telepot
 from telepot.loop import MessageLoop
@@ -17,6 +18,7 @@ class WeatherBot(telepot.Bot):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
         self._question_parser = QuestionParser()
+        self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
 
         super().__init__(telegram_token)
@@ -70,27 +72,6 @@ class WeatherBot(telepot.Bot):
         """
         return message
 
-    def cadastrarNome(self, chat_id):
-        return None
-
-    def cadastrarLocalidade(self, chat_id):
-        return None
-
-    def evaluateSubscription(self, chat_id, text):
-        if not chat_id in self.subscriptionsState:
-            self.subscriptionsState[chat_id] = 'nome'
-            self.sendMessage(chat_id, 'Qual seu nome?')
-            return
-        state = self.subscriptionsState[chat_id]
-        if state == 'nome':
-            self.cadastrarNome(text)
-            self.subscriptionsState[chat_id] = 'localidade'
-            self.sendMessage(chat_id, 'Qual sua atual localidade?')
-        elif state == 'localidade':
-            self.cadastrarLocalidade(text)
-            del self.subscriptionsState[chat_id]
-            self.sendMessage(chat_id, 'Obrigado por se cadastrar!! Aproveite nossas funcionalidades!!')
-
     def on_callback_query(self, msg):
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
         self.answerCallbackQuery(query_id, text='Got it')
@@ -107,8 +88,9 @@ class WeatherBot(telepot.Bot):
         content_type, _, chat_id = telepot.glance(msg)
         if content_type == 'text':
             text = msg['text']
-            if chat_id in self.subscriptionsState or text.strip().lower() in ['/cadastro']:
-                self.evaluateSubscription(chat_id, text)
+            if self.handshakeHandler.checkHandshakeStatus(chat_id) or text.strip().lower() in ['/cadastro']:
+                #self.evaluateSubscription(chat_id, text)
+                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
             elif text.strip().lower() in ['/start']:
                 self.start(chat_id)
             else:
