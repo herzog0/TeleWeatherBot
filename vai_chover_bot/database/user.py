@@ -1,23 +1,24 @@
 class User(object):
-    def __init__(self, name, cellphone):
+    def __init__(self, chat_id, name, email, city):
+        self.id = chat_id
         self.name = name
-        self.cellphone = cellphone
-        
+        self.email = email
+        self.city = city
 
     @staticmethod
     def from_dict(source):
-        user = User(source['name'], source['cellphone'])
-
+        user = User(source['id'], source['name'], source['email'], source['city'])
         return user
 
     def to_dict(self):
         dest = {
+            u'id': self.id,
             u'name': self.name,
-            u'cellphone': self.cellphone
+            u'email': self.email,
+            u'city': self.city,
         }
-
         return dest
 
     def __repr__(self):
-        return u'User(name={}, cellphone={})'.format(
-            self.name, self.cellphone)
+        return u'User(id={}, name={}, email={}, city={})'.format(
+                self.id, self.name, self.email, self.city)

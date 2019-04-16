@@ -11,20 +11,20 @@ class UserDAO(object):
     
     def write(self, user):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(user.cellphone).set(user.to_dict())
+        doc_ref = db.collection(u'users').document(user.id).set(user.to_dict())
         return doc_ref
 
-    def read(self, cellphone):
+    def read(self, id):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(cellphone)
+        doc_ref = db.collection(u'users').document(id)
         return User.from_dict(doc_ref.get().to_dict())
     
     def update(self, user):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(user.cellphone)
+        doc_ref = db.collection(u'users').document(user.id)
         doc_ref.update(user.to_dict())
 
-    def delete(self, cellphone):
+    def delete(self, id):
         db = firestore.client()
-        db.collection(u'users').document(cellphone).delete()
+        db.collection(u'users').document(id).delete()
 
