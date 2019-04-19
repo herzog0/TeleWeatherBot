@@ -1,2 +1,2 @@
-from .userDAO import UserDAO
 from .user import User
+from .userDAO import UserDAO
