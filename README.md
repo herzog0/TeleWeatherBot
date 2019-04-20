@@ -70,3 +70,29 @@ make install
 
 ## Arquitetura
 ![Arquitetura Vai Chover Bot](https://i.imgur.com/qM6FvJC.png)
+
+## Deploy no Cloud (v1)
+Abra o cloud console
+
+Entre no cumpute engine e abra a maquina vai-chover-vm por ssh
+
+```bash
+cd vai_chover_bot
+```
+
+```bash
+git fetch
+git checkout <tag da nova versão>
+```
+
+```bash
+htop
+```
+
+Ache e mate o processo da versão atual
+
+```bash
+nohup make run &
+```
+
+Aperte entrer para receber devolta o terminal e feche a janela
