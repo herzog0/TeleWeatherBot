@@ -23,7 +23,6 @@ class WeatherBot(telepot.Bot):
 
         super().__init__(telegram_token)
 
-
     def _getAnswer(self, question_type: QuestionType, city):
         """Busca uma descrição do tempo em uma cidade pela API do OWM e coloca em uma string"""
 
@@ -46,6 +45,9 @@ class WeatherBot(telepot.Bot):
                 return f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
             else:
                 return f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+        elif question_type is QuestionType.SET_ALARM:
+            return "ok alarme"
+
 
         # caso base, questão desconhecida/desentendida
         raise CouldNotUnderstandException
@@ -89,7 +91,7 @@ class WeatherBot(telepot.Bot):
         if content_type == 'text':
             text = msg['text']
             if self.handshakeHandler.checkHandshakeStatus(chat_id) or text.strip().lower() in ['/cadastro']:
-                #self.evaluateSubscription(chat_id, text)
+                # self.evaluateSubscription(chat_id, text)
                 self.handshakeHandler.evaluateSubscription(self, chat_id, text)
             elif text.strip().lower() in ['/start']:
                 self.start(chat_id)

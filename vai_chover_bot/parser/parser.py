@@ -29,6 +29,11 @@ class QuestionParser:
 
         # uma ou duas palavras só pode ser o nome da cidade
         # descriçao do tempo
+
+        for word in words:
+            if word in ('alarme', 'alerta', 'aviso', 'avise'):
+                return QuestionType.SET_ALARM, ['NULO']
+
         if 1 <= len(words) <= 2:
             return QuestionType.WEATHER, [join_city_name(words)]
 

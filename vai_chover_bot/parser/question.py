@@ -20,6 +20,8 @@ class QuestionType(Enum):
     IS_RAINY        = auto()
     IS_SUNNY        = auto()
     IS_CLOUDY       = auto()
+
+    SET_ALARM       = auto()
     # origem das informações da última cidade
     #SOURCE          = auto()
 
