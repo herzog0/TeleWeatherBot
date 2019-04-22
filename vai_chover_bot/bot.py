@@ -6,7 +6,6 @@ from .weather import WeatherAPI, NotFoundError
 from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
 from .handshake import Handshake
 from .alerts.notification import Notification
-from .communication.basic import markdown_message, simple_message, answer_callback_query
 
 import telepot
 from telepot.loop import MessageLoop
@@ -92,16 +91,14 @@ class WeatherBot(telepot.Bot):
                     if response is QuestionType.SET_ALARM:
                         Notification.set_notification_type(self, chat_id)
                     else:
-                        simple_message(chat_id, response)
+                        self.simple_message(chat_id, response)
 
-    @staticmethod
-    def on_callback_query(msg):
+    def on_callback_query(self, msg):
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
-        simple_message(from_id, "asdfg")
-        answer_callback_query(query_id, message='got ittt')
+        self.simple_message(from_id, "asdfg")
+        self.answer_callback_query(query_id, message='got ittt')
 
-    @staticmethod
-    def help(chat_id, args):
+    def help(self, chat_id, args):
         main_help_message = u"""
 Olá, você está usando o bot TeleWeather!
 Usando dados abertos da API do OpenWeather, este bot te dá funcionalidades climáticas como:
@@ -130,24 +127,23 @@ ou   *help previsao* (o mesmo que "ajuda 1")
                     helptype = '4'
 
         if helptype == '1':
-            simple_message(chat_id, 'ajuda pro 1')
+            self.simple_message(chat_id, 'ajuda pro 1')
 
         elif helptype == '2':
-            simple_message(chat_id, 'ajuda pro 2')
+            self.simple_message(chat_id, 'ajuda pro 2')
 
         elif helptype == '3':
-            simple_message(chat_id, 'ajuda pro 3')
+            self.simple_message(chat_id, 'ajuda pro 3')
 
         elif helptype == '4':
-            simple_message(chat_id, 'ajuda pro 4')
+            self.simple_message(chat_id, 'ajuda pro 4')
 
         else:
-            markdown_message(chat_id, main_help_message)
+            self.markdown_message(chat_id, main_help_message)
 
         # TODO escrever mensagens de ajuda para cada item especificado
 
-    @staticmethod
-    def start(chat_id):
+    def start(self, chat_id):
         initial_response_text = """
         Olá!!
         Você está iniciando o TeleWeatherBot!! Bem vindo!!
@@ -161,7 +157,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             [InlineKeyboardButton(text='Iniciar Cadastro', callback_data='cadastro')],
             [InlineKeyboardButton(text='Exibir comandos disponíveis', callback_data='comandos')]
         ])
-        simple_message(chat_id, initial_response_text, reply_markup=keyboard)
+        self.simple_message(chat_id, initial_response_text, reply_markup=keyboard)
 
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
@@ -179,3 +175,21 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     #     """Roda o bot em outra thread"""
     #     # TODO: também mudar aqui
     #     MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
+    
+    def simple_message(self, chat_id, message, **kwargs):
+        self.sendMessage(chat_id, message, **kwargs)
+
+    def markdown_message(self, chat_id, message, **kwargs):
+        self.simple_message(chat_id, message, parse_mode="Markdown", **kwargs)
+
+    def html_message(self, chat_id, message, **kwargs):
+        self.simple_message(chat_id, message, parse_mode="HTML", **kwargs)
+
+    def inline_keyboard_message(self, chat_id, message, keyboard=None, **kwargs):
+        self.simple_message(chat_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
+
+    def edit_message(self, message_id, message, keyboard=None, **kwargs):
+        self.editMessageText(message_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
+
+    def answer_callback_query(self, query_id, message='', **kwargs):
+        self.answerCallbackQuery(query_id, message, **kwargs)
