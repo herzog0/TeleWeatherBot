@@ -69,7 +69,7 @@ make install
 - Alerta de mudanças bruscas no clima.
 
 ## Arquitetura
-![Arquitetura Vai Chover Bot](https://i.imgur.com/qM6FvJC.png)
+![Arquitetura Vai Chover Bot](https://imgur.com/Rt6o1zI)
 
 ## Deploy no Cloud (v1)
 Abra o cloud console
