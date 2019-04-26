@@ -15,7 +15,7 @@ class Handshake:
         state = self.subscriptionsState[chat_id]
         if state == 'nome':
             self.cadastrarNome(chat_id, text)
-            currentBot.sendMessage(chat_id, 'Qual sua atual localidade?')
+            currentBot.sendMessage(chat_id, 'Qual seu e-mail?')
         elif state == 'email':
             self.cadastrarEmail(chat_id, text)
             currentBot.sendMessage(chat_id, 'Qual a sua cidade?')
