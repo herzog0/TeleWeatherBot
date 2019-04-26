@@ -41,7 +41,7 @@ class Handshake:
     def cadastrarCidade(self, chat_id, cidade):
         del self.subscriptionsState[chat_id]
         list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['city'] = cidade
-        self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, v))[0]))
+        self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]))
         ## deletar de self.userDicts
 
 
