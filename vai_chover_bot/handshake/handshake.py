@@ -15,7 +15,7 @@ class Handshake:
         state = self.subscriptionsState[chat_id]
         if state == 'nome':
             self.cadastrarNome(chat_id, text)
-            currentBot.sendMessage(chat_id, 'Qual sua atual localidade?')
+            currentBot.sendMessage(chat_id, 'Qual seu e-mail?')
         elif state == 'email':
             self.cadastrarEmail(chat_id, text)
             currentBot.sendMessage(chat_id, 'Qual a sua cidade?')
@@ -41,7 +41,7 @@ class Handshake:
     def cadastrarCidade(self, chat_id, cidade):
         del self.subscriptionsState[chat_id]
         list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['city'] = cidade
-        self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, v))[0]))
+        self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]))
         ## deletar de self.userDicts
 
 
