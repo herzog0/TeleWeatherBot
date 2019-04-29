@@ -7,6 +7,11 @@ from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
 from .handshake import Handshake
 from .alerts.notification import Notification
 
+from pyowm import OWM
+from pyowm.utils import geo
+from pyowm.alertapi30.enums import WeatherParametersEnum, OperatorsEnum, AlertChannelsEnum
+from pyowm.alertapi30.condition import Condition
+
 import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
@@ -25,6 +30,7 @@ class WeatherBot(telepot.Bot):
         super().__init__(telegram_token)
 
     def _get_answer(self, question_type: QuestionType, city):
+
         """Busca uma descrição do tempo em uma cidade pela API do OWM e coloca em uma string"""
 
         # testa os tipos de questão já adicionados
@@ -74,9 +80,12 @@ class WeatherBot(telepot.Bot):
             # Get its text
             text = msg['text']
 
-            if self.handshakeHandler.checkHandshakeStatus(chat_id) \
+            # TODO melhorar a função parse() pra tratar inclusive os casos abaixo.
+            #  Cadastro, start e help deveriam ser tipos de pergunta também
+
+            if self.handshakeHandler.check_handshake_status(chat_id) \
                     or text.strip().lower() in ['/cadastro', 'cadastro', 'cadastrar']:
-                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
+                self.handshakeHandler.evaluate_subscription(self, chat_id, text)
 
             elif text.strip().lower() in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
                 self.start(chat_id)
@@ -95,8 +104,12 @@ class WeatherBot(telepot.Bot):
 
     def on_callback_query(self, msg):
         query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
-        self.simple_message(from_id, "asdfg")
-        self.answer_callback_query(query_id, message='got ittt')
+        # self.simple_message(from_id, "asdfg")
+
+        if query_data == 'daily':
+            self.simple_message(from_id, message="eita deu certo")
+
+        # self.answer_callback_query(query_id, message='got ittt')
 
     def help(self, chat_id, args):
         main_help_message = u"""
@@ -114,7 +127,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
         helptype = None
 
-        if args and len(args) > 1 and 'ajuda' in args:
+        if args and len(args) > 1 and ('ajuda' or 'help') in args:
             for arg in args:
                 if arg in ['1', 1, 'previsão', 'previsao', 'tempo', 'prever']:
                     helptype = '1'

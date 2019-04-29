@@ -9,7 +9,11 @@ class Notification:
         choose_type = """Escolha o tipo de notificação que deseja configurar"""
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='Notificação diária', callback_data='cadastro')],
-            [InlineKeyboardButton(text='Notificação por gatilho', callback_data='comandos')]
+            [InlineKeyboardButton(text='Notificação diária', callback_data='daily')],
+            [InlineKeyboardButton(text='Notificação por gatilho', callback_data='trigger')]
         ])
-        bot_instance.sendMessage(chat_id, choose_type, reply_markup=keyboard)
+
+        bot_instance.simple_message(chat_id, "blalbalf odase")
+        bot_instance.inline_keyboard_message(chat_id, choose_type, keyboard)
+
+
