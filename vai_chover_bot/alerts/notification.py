@@ -1,4 +1,4 @@
-from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 
 class Notification:
@@ -35,19 +35,49 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='Localização atual', callback_data='notification.set.location')],
             [InlineKeyboardButton(text='Diga uma cidade', callback_data='notification.set.city')],
-            [InlineKeyboardButton(text='<< Voltar', callback_data='notification.set.goback')]
+            [InlineKeyboardButton(text='<< Voltar', callback_data='notification.set.go_back')]
         ])
 
         bot_instance.edit_message(message_id, msg_edit, keyboard)
 
     @staticmethod
+    def set_daily_notification_by_location(bot_instance, message_id):
+        message = """Toque para enviar sua localização atual."""
+        keyboard = ReplyKeyboardMarkup(keyboard=[
+            [KeyboardButton(text='Localização', request_location=True)]
+            ],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        chat_id = message_id[0]
+        bot_instance.simple_message(chat_id=chat_id, message=message, reply_markup=keyboard)
+
+
+
+
+
+
+    @staticmethod
+    def set_daily_notification_by_city(bot_instance, message_id):
+        pass
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @staticmethod
     def set_notification_by_trigger(bot_instance, message_id):
         pass
 
-    @staticmethod
-    def set_daily_location(bot_instance, message_id):
-        pass
 
-    @staticmethod
-    def set_daily_city(bot_instance, message_id):
-        pass

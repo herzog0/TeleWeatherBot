@@ -219,13 +219,13 @@ ou   *help previsao* (o mesmo que "ajuda 1")
                 elif info[2] == 'city':
                     value = 4
 
-                elif info[2] == 'goback':
+                elif info[2] == 'go_back':
                     value = 5
 
             options = {
                 "1": "Notification.set_daily_notification(self, message_id)",
                 "2": "",
-                "3": "",
+                "3": "Notification.set_daily_notification_by_location(self, message_id)",
                 "4": "",
                 "5": "Notification.set_notification_type(self, message_id, query_id)"
             }
