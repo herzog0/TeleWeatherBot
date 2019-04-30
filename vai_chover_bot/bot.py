@@ -83,9 +83,9 @@ class WeatherBot(telepot.Bot):
             # TODO melhorar a função parse() pra tratar inclusive os casos abaixo.
             #  Cadastro, start e help deveriam ser tipos de pergunta também
 
-            if self.handshakeHandler.check_handshake_status(chat_id) \
+            if self.handshakeHandler.checkHandshakeStatus(chat_id) \
                     or text.strip().lower() in ['/cadastro', 'cadastro', 'cadastrar']:
-                self.handshakeHandler.evaluate_subscription(self, chat_id, text)
+                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
 
             elif text.strip().lower() in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
                 self.start(chat_id)
@@ -98,20 +98,22 @@ class WeatherBot(telepot.Bot):
                 response = self.parse(text)
                 if response:
                     if response is QuestionType.SET_ALARM:
-                        Notification.set_notification_type(self, chat_id)
+                        message_id = self.get_message_id(msg)
+                        Notification.set_notification_type(self, message_id)
                     else:
                         self.simple_message(chat_id, response)
 
-    def on_callback_query(self, msg):
-        query_id, from_id, query_data = telepot.glance(msg, flavor='callback_query')
-        # self.simple_message(from_id, "asdfg")
+    @staticmethod
+    def get_message_id(msg):
+        try:
+            message_id = telepot.message_identifier(msg)
+        except ValueError:
+            message_id = (msg['message']['chat']['id'], msg['message']['message_id'])
 
-        if query_data == 'daily':
-            self.simple_message(from_id, message="eita deu certo")
-
-        # self.answer_callback_query(query_id, message='got ittt')
+        return message_id
 
     def help(self, chat_id, args):
+
         main_help_message = u"""
 Olá, você está usando o bot TeleWeather!
 Usando dados abertos da API do OpenWeather, este bot te dá funcionalidades climáticas como:
@@ -127,7 +129,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
         helptype = None
 
-        if args and len(args) > 1 and ('ajuda' or 'help') in args:
+        if args and len(args) > 1 and ('ajuda' in args or 'help' in args):
             for arg in args:
                 if arg in ['1', 1, 'previsão', 'previsao', 'tempo', 'prever']:
                     helptype = '1'
@@ -188,7 +190,63 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     #     """Roda o bot em outra thread"""
     #     # TODO: também mudar aqui
     #     MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
-    
+
+    def on_callback_query(self, callback_query):
+        query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
+
+        # Build message identification
+        message_id = self.get_message_id(callback_query)
+
+        # Navigate the callback if it came from the notifications setter
+        if query_data.split('.')[0] == 'notification':
+
+            info = query_data.split('.')
+
+            value = 0
+            if info[1] == 'type':
+
+                if info[2] == 'daily':
+                    value = 1
+
+                elif info[2] == 'trigger':
+                    value = 2
+
+            elif info[1] == 'set':
+
+                if info[2] == 'location':
+                    value = 3
+
+                elif info[2] == 'city':
+                    value = 4
+
+                elif info[2] == 'goback':
+                    value = 5
+
+            options = {
+                "1": "Notification.set_daily_notification(self, message_id)",
+                "2": "",
+                "3": "",
+                "4": "",
+                "5": "Notification.set_notification_type(self, message_id, query_id)"
+            }
+            eval(options.get(str(value), "None"))
+
+
+
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
     def simple_message(self, chat_id, message, **kwargs):
         self.sendMessage(chat_id, message, **kwargs)
 
