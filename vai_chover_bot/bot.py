@@ -3,7 +3,7 @@ O bot propriamente
 """
 
 from .weather import WeatherAPI, NotFoundError
-from .parser import QuestionParser, QuestionType, CouldNotUnderstandException
+from .parser import parser, QuestionType, CouldNotUnderstandException
 from .handshake import Handshake
 from .alerts.notification import Notification
 
@@ -23,7 +23,6 @@ class WeatherBot(telepot.Bot):
     def __init__(self, telegram_token: str, open_weather_token: str):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
-        self._question_parser = QuestionParser()
         self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
 
@@ -35,89 +34,69 @@ class WeatherBot(telepot.Bot):
 
         super().__init__(telegram_token)
 
-    def _get_answer(self, question_type: QuestionType, city):
-
-        """Busca uma descrição do tempo em uma cidade pela API do OWM e coloca em uma string"""
-
-        # testa os tipos de questão já adicionados
-        if question_type is QuestionType.WEATHER:
-            weather = self._weather_api.getWeatherDescription(city)
-            return f'Parece estar {weather} em {city}'
-
-        elif question_type is QuestionType.IS_RAINY:
-            rainy = self._weather_api.isRainy(city)
-            return f'Tá chovendo em {city} {"sim" if rainy else "não"}'
-
-        elif question_type is QuestionType.TEMPERATURE:
-            temp = self._weather_api.getTemperature(city)
-            return f'Acho que tá {temp:.1f}°C  lá em {city}'
-
-        elif question_type is QuestionType.TEMP_VARIATION:
-            t_min, t_max = self._weather_api.getTempVariation(city)
-            if t_min != t_max:
-                return f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
-            else:
-                return f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
-
-        elif question_type is QuestionType.SET_ALARM:
-            return QuestionType.SET_ALARM
-
-        # caso base, questão desconhecida/desentendida
-        raise CouldNotUnderstandException
-
-    def parse(self, text: str):
-        """Parseia a pergunta e a resposta, cuidando com alguns casos de erro também"""
-        try:
-            qtype, args = self._question_parser.parse(text)
-            return self._get_answer(qtype, *args)
-
-        except CouldNotUnderstandException:
-            return 'Putz, não consegui entender o que disse'
-        except NotFoundError:
-            return 'Vixi, não conheço essa cidade'
-
     def on_chat_message(self, msg):
 
         content_type, _, chat_id = telepot.glance(msg)
 
         # If the message is a text message
         if content_type == 'text':
-
-            # Get its text
-            text = msg['text']
-
-            # TODO melhorar a função parse() pra tratar inclusive os casos abaixo.
-            #  Cadastro, start e help deveriam ser tipos de pergunta também:
-
-            # response = self.parse(text)
-            # self.evaluate_response(response, msg)
-
-            if self.handshakeHandler.checkHandshakeStatus(chat_id) \
-                    or text.strip().lower() in ['/cadastro', 'cadastro', 'cadastrar']:
-                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
-
-            elif text.strip().lower() in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
-                self.start(chat_id)
-
-            elif text.strip().lower().split()[0] in ['/help', 'help', '/ajuda', 'ajuda', 'socorro']:
-                textsplit = text.strip().lower().split()
-                self.help(chat_id, textsplit)
-
-            else:
-                response = self.parse(text)
-                if response:
-                    if response is QuestionType.SET_ALARM:
-                        message_id = self.get_message_id(msg)
-                        Notification.set_notification_type(self, message_id)
-                    else:
-                        self.simple_message(chat_id, response)
+            self.evaluate_text(msg)
 
         elif content_type == 'location':
             self.evaluate_location(msg)
-            pass
 
-    def evaluate_response(self, response, msg):
-        pass
+    def evaluate_text(self, msg):
+        chat_type, _, chat_id = telepot.glance(msg)
+        text = msg['text']
+        response = None
+
+        try:
+            qtype, city = parser.parse(text)
+            city = city[0]
+
+            if qtype is QuestionType.SET_SUBSCRIPTION \
+                    or self.handshakeHandler.checkHandshakeStatus(chat_id):
+                #
+                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
+
+            elif qtype is QuestionType.INITIAL_MESSAGE:
+                #
+                self.start(chat_id)
+
+            elif qtype is QuestionType.HELP_REQUEST:
+                #
+                self.help(chat_id, text)
+
+            elif qtype is QuestionType.SET_ALARM:
+                message_id = self.get_message_id(msg)
+                Notification.set_notification_type(self, message_id)
+
+            elif qtype is QuestionType.WEATHER:
+                weather = self._weather_api.getWeatherDescription(city)
+                response = f'Parece estar {weather} em {city}'
+
+            elif qtype is QuestionType.IS_RAINY:
+                rainy = self._weather_api.isRainy(city)
+                response = f'Tá chovendo em {city} {"sim" if rainy else "não"}'
+
+            elif qtype is QuestionType.TEMPERATURE:
+                temp = self._weather_api.getTemperature(city)
+                response = f'Acho que tá {temp:.1f}°C  lá em {city}'
+
+            elif qtype is QuestionType.TEMP_VARIATION:
+                t_min, t_max = self._weather_api.getTempVariation(city)
+                if t_min != t_max:
+                    response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
+                else:
+                    response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+
+            if response:
+                self.simple_message(chat_id, response)
+
+        except CouldNotUnderstandException:
+            self.simple_message(chat_id, 'Putz, não consegui entender o que disse')
+        except NotFoundError:
+            self.simple_message(chat_id, 'Vixi, não conheço essa cidade')
 
     def evaluate_location(self, msg):
         chat_id, message_id = self.get_message_id(msg)
@@ -136,7 +115,9 @@ class WeatherBot(telepot.Bot):
 
         return message_id
 
-    def help(self, chat_id, args):
+    def help(self, chat_id, text):
+
+        args = text.lower().strip().split()
 
         main_help_message = u"""
 Olá, você está usando o bot TeleWeather!
