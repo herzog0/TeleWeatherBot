@@ -42,39 +42,38 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
 
     @staticmethod
     def set_daily_notification_by_location(bot_instance, message_id):
-        message = """Toque para enviar sua localização atual."""
+        message = """..."""
         keyboard = ReplyKeyboardMarkup(keyboard=[
-            [KeyboardButton(text='Localização', request_location=True)]
+            [KeyboardButton(text='Enviar localização', request_location=True)]
             ],
             resize_keyboard=True,
             one_time_keyboard=True
         )
+
+        keyboard_2 = InlineKeyboardMarkup(inline_keyboard=[
+         [InlineKeyboardButton(text='<< Voltar', callback_data='notification.get.cancel.by_location')]
+        ])
+
         chat_id = message_id[0]
-        bot_instance.simple_message(chat_id=chat_id, message=message, reply_markup=keyboard)
 
+        # Envia um botão que aparece no campo de digitação
+        msg_kbd_location = bot_instance.markdown_message(chat_id=chat_id, message=message, reply_markup=keyboard)
 
+        # Edita o teclado de seleção de "notificação por cidade ou por localização"
+        bot_instance.edit_message(message_id, message="*Aguardando seu envio de localização...*", keyboard=keyboard_2)
 
-
-
+        bot_instance.delete_message(bot_instance.get_message_id(msg_kbd_location))
 
     @staticmethod
     def set_daily_notification_by_city(bot_instance, message_id):
+        msg_edit = """Envie o nome da cidade para a qual deseja receber notificações"""
+
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text='<< Voltar', callback_data='notification.get.cancel.by_city')]
+        ])
+
+        bot_instance.edit_message(message_id, msg_edit, keyboard)
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @staticmethod
     def set_notification_by_trigger(bot_instance, message_id):

@@ -27,6 +27,12 @@ class WeatherBot(telepot.Bot):
         self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
 
+        # Dicionários que controla o estado do set de notificação, previsão ou cadastro para um usuário
+        self.notification_set_state = {}
+
+        # Vetor que guarda os diversos dicionários sendo criados simultaneameante por usuários diferentes
+        self.notification_set_dicts = []
+
         super().__init__(telegram_token)
 
     def _get_answer(self, question_type: QuestionType, city):
@@ -81,7 +87,10 @@ class WeatherBot(telepot.Bot):
             text = msg['text']
 
             # TODO melhorar a função parse() pra tratar inclusive os casos abaixo.
-            #  Cadastro, start e help deveriam ser tipos de pergunta também
+            #  Cadastro, start e help deveriam ser tipos de pergunta também:
+
+            # response = self.parse(text)
+            # self.evaluate_response(response, msg)
 
             if self.handshakeHandler.checkHandshakeStatus(chat_id) \
                     or text.strip().lower() in ['/cadastro', 'cadastro', 'cadastrar']:
@@ -102,6 +111,21 @@ class WeatherBot(telepot.Bot):
                         Notification.set_notification_type(self, message_id)
                     else:
                         self.simple_message(chat_id, response)
+
+        elif content_type == 'location':
+            self.evaluate_location(msg)
+            pass
+
+    def evaluate_response(self, response, msg):
+        pass
+
+    def evaluate_location(self, msg):
+        chat_id, message_id = self.get_message_id(msg)
+
+        #if not chat_id in
+
+
+        pass
 
     @staticmethod
     def get_message_id(msg):
@@ -191,6 +215,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     #     # TODO: também mudar aqui
     #     MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
 
+
     def on_callback_query(self, callback_query):
         query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
 
@@ -201,35 +226,42 @@ ou   *help previsao* (o mesmo que "ajuda 1")
         if query_data.split('.')[0] == 'notification':
 
             info = query_data.split('.')
-
-            value = 0
+            values = [0]
             if info[1] == 'type':
 
                 if info[2] == 'daily':
-                    value = 1
+                    values = [1]
 
                 elif info[2] == 'trigger':
-                    value = 2
+                    values = [2]
 
             elif info[1] == 'set':
 
                 if info[2] == 'location':
-                    value = 3
+                    values = [3]
 
                 elif info[2] == 'city':
-                    value = 4
+                    values = [4]
 
                 elif info[2] == 'go_back':
-                    value = 5
+                    values = [5]
+
+            elif info[1] == 'get':
+
+                if info[2] == 'cancel':
+                    if info[3] == 'by_location':
+                        values = [1]
 
             options = {
                 "1": "Notification.set_daily_notification(self, message_id)",
                 "2": "",
                 "3": "Notification.set_daily_notification_by_location(self, message_id)",
-                "4": "",
-                "5": "Notification.set_notification_type(self, message_id, query_id)"
+                "4": "Notification.set_daily_notification_by_city(self, message_id)",
+                "5": "Notification.set_notification_type(self, message_id, query_id)",
             }
-            eval(options.get(str(value), "None"))
+
+            for value in values:
+                eval(options.get(str(value), "None"))
 
 
 
@@ -248,19 +280,22 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 #
 
     def simple_message(self, chat_id, message, **kwargs):
-        self.sendMessage(chat_id, message, **kwargs)
+        return self.sendMessage(chat_id, message, **kwargs)
 
     def markdown_message(self, chat_id, message, **kwargs):
-        self.simple_message(chat_id, message, parse_mode="Markdown", **kwargs)
+        return self.simple_message(chat_id, message, parse_mode="Markdown", **kwargs)
 
     def html_message(self, chat_id, message, **kwargs):
-        self.simple_message(chat_id, message, parse_mode="HTML", **kwargs)
+        return self.simple_message(chat_id, message, parse_mode="HTML", **kwargs)
 
     def inline_keyboard_message(self, chat_id, message, keyboard=None, **kwargs):
-        self.simple_message(chat_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
+        return self.simple_message(chat_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
 
     def edit_message(self, message_id, message, keyboard=None, **kwargs):
-        self.editMessageText(message_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
+        return self.editMessageText(message_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
 
     def answer_callback_query(self, query_id, message='', **kwargs):
-        self.answerCallbackQuery(query_id, message, **kwargs)
+        return self.answerCallbackQuery(query_id, message, **kwargs)
+
+    def delete_message(self, message_id):
+        return self.deleteMessage(message_id)

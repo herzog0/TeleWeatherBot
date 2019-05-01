@@ -21,7 +21,18 @@ class QuestionType(Enum):
     IS_SUNNY        = auto()
     IS_CLOUDY       = auto()
 
+    # criar notificações
     SET_ALARM       = auto()
+
+    # cadastrar
+    SET_SUBSCRIPTION = auto()
+
+    # início do bot
+    INITIAL_MESSAGE = auto()
+
+    # pedido de ajuda
+    HELP_REQUEST = auto()
+
     # origem das informações da última cidade
     #SOURCE          = auto()
 

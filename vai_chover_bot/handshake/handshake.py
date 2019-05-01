@@ -8,7 +8,8 @@ class Handshake:
         self.repo = UserDAO()
 
     def evaluateSubscription(self, currentBot, chat_id, text):
-        if not chat_id in self.subscriptionsState:
+        chat_id = str(chat_id)
+        if chat_id not in self.subscriptionsState:
             self.initiateSubscription(chat_id)
             currentBot.sendMessage(chat_id, 'Qual seu nome?')
             return
@@ -25,10 +26,10 @@ class Handshake:
 
     def initiateSubscription(self, chat_id):
         self.subscriptionsState[chat_id] = 'nome'
-        self.userDicts.append({'id':chat_id})
+        self.userDicts.append({'id': chat_id})
 
     def checkHandshakeStatus(self, chat_id):
-        return chat_id in self.subscriptionsState
+        return str(chat_id) in self.subscriptionsState
 
     def cadastrarNome(self, chat_id, name):
         self.subscriptionsState[chat_id] = 'email'
