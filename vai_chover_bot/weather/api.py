@@ -6,6 +6,7 @@ from pyowm import OWM
 from pyowm.weatherapi25.weather import Weather
 
 
+
 class WeatherAPI:
     """Interface de uso da API do OpenWeatherMap"""
     def __init__(self, owm_api_key: str):
@@ -16,6 +17,7 @@ class WeatherAPI:
             # essa configuração acima muda a linguagem para 'pt' e
             # adiciona um cache simples pra tentar reduzir os requests
         )
+
 
     def _getWeather(self, city: str) -> Weather:
         """

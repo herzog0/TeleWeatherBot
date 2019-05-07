@@ -14,53 +14,46 @@ Para tanto, usamos a [Open Weather Map](https://openweathermap.org/), API aberta
 
 ## Execução
 
-### Rodando
+### Configurando ambiente
 
-Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api). Essa variáveis serão recuperadas do ambiente com os nomes `TELEGRAM_TOKEN` e `OWM_TOKEN`. Elas podem ser marcadas com:
+Recomendamos a criação de um ambiente virtual do python 3 para rodar e trabalhar com o bot, basta rodar os comandos:
 
 ```bash
-export TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
-export OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
+virtualenv -p python3 ~/.bot_environment
+source ~/.bot_environment/bin/activate
 ```
 
-Ou fazendo um arquivo `.env` com o seguinte conteúdo:
+Agora que estamos em um ambiente seguramente separado do ambiente pessoal, podemos instalar os pacotes necessários listados em "requirements.txt".
 
-```dotenv
+```bash
+pip install <pacote 1> 
+pip install <pacote 2>
+pip install <etc...>
+```
+
+Para sair deste ambiente virtual, basta digitar:
+
+```bash
+deactivate
+```
+
+### Rodando
+
+Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api). Essa variáveis serão recuperadas de um arquivo que deve se chamar "TOKENS_HERE" e estar contido na pasta raiz do projeto, o formato dos tokens escritos no arquivo deve seguir o formato:
+
+```
 TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
 OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
 ```
 
-E, só então, podemos rodar o bot com:
+E, só então, considerando o ambiente virtual ativado na sessão "configuração do ambiente", podemos rodar o bot com:
 
 ```bash
-make run
+python3 ./run.py
 ```
 
 Obs: note que os tokens utilizados aqui são falsos, servindo apenas como exemplo.
 
-### Build
-
-```bash
-make
-```
-
-Isso instala as dependências pelo `pip` e compila o byte code para próximas execuções (apesar não ser necessário). Essa etapa não é necessária, já que `make run` já executa o build.
-
-## Desenvolvimento
-
-Para as funções de desenvolvimento, a instalação local do bot é necessária, porém essa etapa já é executada sempre que preciso.
-
-### Testes
-
-```bash
-make tests
-```
-
-### Instalação
-
-```bash
-make install
-```
 
 ## Próximas funcionalidades
 
@@ -74,7 +67,7 @@ make install
 ## Deploy no Cloud (v1)
 Abra o cloud console
 
-Entre no cumpute engine e abra a maquina vai-chover-vm por ssh
+Entre no compute engine e abra a maquina vai-chover-vm por ssh
 
 ```bash
 cd vai_chover_bot
@@ -92,7 +85,7 @@ htop
 Ache e mate o processo da versão atual
 
 ```bash
-nohup make run &
+nohup python3 run.py &
 ```
 
 Aperte entrer para receber devolta o terminal e feche a janela
