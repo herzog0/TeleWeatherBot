@@ -16,6 +16,8 @@ import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
+import datetime
+
 
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
@@ -94,17 +96,22 @@ class WeatherBot(telepot.Bot):
                 self.simple_message(chat_id, response)
 
         except CouldNotUnderstandException:
-            self.simple_message(chat_id, 'Putz, não consegui entender o que disse')
+            self.markdown_message(chat_id, '*Desculpe, mas não entendi*')
         except NotFoundError:
-            self.simple_message(chat_id, 'Vixi, não conheço essa cidade')
+            self.markdown_message(chat_id, '*Infelizmente não reconheci o nome da cidade :(*')
 
-    def evaluate_location(self, msg):
-        chat_id, message_id = self.get_message_id(msg)
-
-        #if not chat_id in
-
-
-        pass
+    # def evaluate_location(self, msg):
+    #     chat_id, message_id = self.get_message_id(msg)
+    #
+    #     # if not chat_id in
+    #
+    #     alert_channel = AlertChannelsEnum.OWM_API_POLLING
+    #     owm = OWM('2a6a25c487d5b3c8b34d9bc0ea1909f3')
+    #     am = owm.alert_manager()
+    #
+    #     am.create_trigger()
+    #     datetime.datetime.strptime()
+    #     pass
 
     @staticmethod
     def get_message_id(msg):
@@ -191,12 +198,6 @@ ou   *help previsao* (o mesmo que "ajuda 1")
         }
                     ).run_forever(*args, **kwargs)
 
-    # def run_as_thread(self, *args, **kwargs):
-    #     """Roda o bot em outra thread"""
-    #     # TODO: também mudar aqui
-    #     MessageLoop(self, self._genHandler()).run_as_thread(*args, **kwargs)
-
-
     def on_callback_query(self, callback_query):
         query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
 
@@ -243,22 +244,6 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
             for value in values:
                 eval(options.get(str(value), "None"))
-
-
-
-
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
 
     def simple_message(self, chat_id, message, **kwargs):
         return self.sendMessage(chat_id, message, **kwargs)
