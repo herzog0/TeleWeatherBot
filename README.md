@@ -49,7 +49,7 @@ OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
 E, só então, considerando o ambiente virtual ativado na sessão "configuração do ambiente", podemos rodar o bot com:
 
 ```bash
-python3 ./run.py
+python3 run.py
 ```
 
 Obs: note que os tokens utilizados aqui são falsos, servindo apenas como exemplo.
@@ -88,4 +88,4 @@ Ache e mate o processo da versão atual
 nohup python3 run.py &
 ```
 
-Aperte entrer para receber devolta o terminal e feche a janela
+Aperte enter para receber de volta o terminal e feche a janela.
