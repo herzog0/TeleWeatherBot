@@ -3,7 +3,7 @@ class User(object):
     Classe User, responsável por definir um usuário a ser referenciado no banco de dados.
     """
 
-    def __init__(self, chat_id, name=None, email=None, city=None):
+    def __init__(self, chat_id, name=None, email=None, city=None, inactive_time=None):
         """
         :param chat_id: o id do chat do telegram com o usuário
         :type chat_id: str
@@ -22,11 +22,11 @@ class User(object):
         self.name = name
         self.email = email
         self.city = city
-
+        self.inactive_time = inactive_time
 
     @staticmethod
     def from_dict(source):
-        user = User(source['id'], source['name'], source['email'], source['city'])
+        user = User(source['id'], source['name'], source['email'], source['city'], source['inactive_time'])
         return user
 
     def to_dict(self):
@@ -35,9 +35,10 @@ class User(object):
             u'name': self.name,
             u'email': self.email,
             u'city': self.city,
+            u'inactive_time': self.inactive_time
         }
         return dest
 
     def __repr__(self):
-        return u'User(id={}, name={}, email={}, city={})'.format(
-                self.id, self.name, self.email, self.city)
+        return u'User(id={}, name={}, email={}, city={}, inactive_time={})'.format(
+                self.id, self.name, self.email, self.city, self.inactive_time)

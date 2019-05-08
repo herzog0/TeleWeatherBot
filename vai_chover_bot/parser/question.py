@@ -33,6 +33,10 @@ class QuestionType(Enum):
     # pedido de ajuda
     HELP_REQUEST = auto()
 
+    DEV_FUNCTIONS_ON = auto()
+    DEV_FUNCTIONS_OFF = auto()
+    DEV_COMMANDS = auto()
+
     # origem das informações da última cidade
     #SOURCE          = auto()
 

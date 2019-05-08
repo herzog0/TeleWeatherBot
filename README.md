@@ -54,6 +54,35 @@ python3 run.py
 
 Obs: note que os tokens utilizados aqui são falsos, servindo apenas como exemplo.
 
+## Modo developer
+
+Para ativar as funcionalidades de developer dentro do bot (poder executar funções administrativas), 
+o arquivo TOKENS_HERE deve conter uma chave no seguinte formato:
+
+```TOKENS_HERE
+PASSWORD=<senha>
+```
+
+Se esta chave existir, o modo developer pode ser ativado por qualquer pessoa,
+ enviando uma mensagem ao bot com o seguinte conteúdo:
+
+```On chat
+/set_dev_functions_on <senha>
+```
+
+Para desativar o modo developer, envie esta mensagem:
+
+```On chat
+/set_dev_functions_off
+```
+
+Para receber uma lista com os comandos de developer, primeiro você deve ativar o modo developer.
+Em seguida, envie a mensagem:
+
+```On chat
+/devhelp
+```
+
 
 ## Próximas funcionalidades
 

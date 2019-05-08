@@ -1,3 +1,4 @@
 telepot
-pyowm
+pyowm==2.8.0 (ou 2.10.0,   a 2.9.0 está dando crash)
 firebase_admin
+urllib3==1.24.3

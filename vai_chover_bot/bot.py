@@ -16,25 +16,52 @@ import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-import datetime
+from datetime import datetime, timedelta
+import vai_chover_bot.dev_functions as devfunc
 
 
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
 
-    def __init__(self, telegram_token: str, open_weather_token: str):
+    def __init__(self, telegram_token: str, open_weather_token: str, password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
         self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
+        if password == "":
+            self.password = False
+        else:
+            self.password = password
 
-        # Dicionários que controla o estado do set de notificação, previsão ou cadastro para um usuário
-        self.notification_set_state = {}
+        self.delta_counter = datetime.now()
 
-        # Vetor que guarda os diversos dicionários sendo criados simultaneameante por usuários diferentes
-        self.notification_set_dicts = []
+        # Dicionário contendo os dicionários de cada usuário
+        self.user_dict = {'SETTING_NOTIFICATION': False, 'FORECAST': False, 'SUBSCRIBING': False, 'msg_time_delta': ""}
+        
+        self.users_dict = {}
+
+        self.dev_dict = {}
 
         super().__init__(telegram_token)
+
+    def update_user_dict(self, chat_id, setting_notification=False, forecast=False, subscribing=False,
+                         only_delta_time_update=True):
+        if chat_id not in self.users_dict:
+            self.users_dict[chat_id] = self.user_dict
+            self.users_dict[chat_id]['msg_time_delta'] = datetime.now()
+
+        if not only_delta_time_update:
+            self.users_dict[chat_id]['SETTING_NOTIFICATION'] = setting_notification
+            self.users_dict[chat_id]['FORECAST'] = forecast
+            self.users_dict[chat_id]['SUBSCRIBING'] = subscribing
+        self.users_dict[chat_id]['msg_time_delta'] = datetime.now() - self.users_dict[chat_id]['msg_time_delta']
+
+    def update_database(self):
+        pass
+
+    def get_user_state(self, chat_id, key=""):
+        assert self.users_dict[chat_id][key] is bool
+        return self.users_dict[chat_id][key]
 
     def on_chat_message(self, msg):
 
@@ -48,7 +75,7 @@ class WeatherBot(telepot.Bot):
             self.evaluate_location(msg)
 
     def evaluate_text(self, msg):
-        chat_type, _, chat_id = telepot.glance(msg)
+        content_type, _, chat_id, msg_date, msg_id = telepot.glance(msg, long=True)
         text = msg['text']
         response = None
 
@@ -56,13 +83,34 @@ class WeatherBot(telepot.Bot):
             qtype, city = parser.parse(text)
             city = city[0]
 
-            if qtype is QuestionType.SET_SUBSCRIPTION \
+            if qtype is QuestionType.DEV_FUNCTIONS_ON:
+                if self.password:
+                    if chat_id in self.dev_dict and self.dev_dict[chat_id]['DEV']:
+                        self.markdown_message(chat_id, "*Você já é developer!*")
+                    elif devfunc.validate_password(self, msg):
+                        devfunc.set_dev_user(self, msg)
+                else:
+                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+            elif qtype is QuestionType.DEV_FUNCTIONS_OFF:
+                if self.password:
+                    devfunc.set_dev_user(self, msg, on=False)
+                else:
+                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+            elif qtype is QuestionType.DEV_COMMANDS:
+                if self.password:
+                    devfunc.list_developer_commands(self, msg)
+                else:
+                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+            elif qtype is QuestionType.SET_SUBSCRIPTION \
                     or self.handshakeHandler.checkHandshakeStatus(chat_id):
                 #
                 self.handshakeHandler.evaluateSubscription(self, chat_id, text)
 
             elif qtype is QuestionType.INITIAL_MESSAGE:
-                #
+                self.update_user_dict(chat_id)
                 self.start(chat_id)
 
             elif qtype is QuestionType.HELP_REQUEST:
@@ -100,18 +148,20 @@ class WeatherBot(telepot.Bot):
         except NotFoundError:
             self.markdown_message(chat_id, '*Infelizmente não reconheci o nome da cidade :(*')
 
-    # def evaluate_location(self, msg):
-    #     chat_id, message_id = self.get_message_id(msg)
-    #
-    #     # if not chat_id in
-    #
-    #     alert_channel = AlertChannelsEnum.OWM_API_POLLING
-    #     owm = OWM('2a6a25c487d5b3c8b34d9bc0ea1909f3')
-    #     am = owm.alert_manager()
-    #
-    #     am.create_trigger()
-    #     datetime.datetime.strptime()
-    #     pass
+    def evaluate_location(self, msg):
+
+        chat_id, message_id = self.get_message_id(msg)
+
+        if self.get_user_state(chat_id, key="SETTING_NOTIFICATION"):
+
+            pass
+
+        elif self.get_user_state(chat_id, key="SUBSCRIBING"):
+            pass
+
+        else:
+            # forecast call
+            pass
 
     @staticmethod
     def get_message_id(msg):
@@ -188,6 +238,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
+
         # TODO: não usar MessageLoop, pq ele ignora o KeyboardInterrupt
 
         # MessageLoop(self, self._genHandler()).run_forever(*args, **kwargs)
@@ -220,17 +271,21 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             elif info[1] == 'set':
 
                 if info[2] == 'location':
+                    self.update_user_dict(message_id[0], setting_notification=True)
                     values = [3]
 
                 elif info[2] == 'city':
+                    self.update_user_dict(message_id[0], setting_notification=True)
                     values = [4]
 
                 elif info[2] == 'go_back':
+                    self.update_user_dict(message_id[0])
                     values = [5]
 
             elif info[1] == 'get':
 
                 if info[2] == 'cancel':
+                    self.update_user_dict(message_id[0])
                     if info[3] == 'by_location':
                         values = [1]
 

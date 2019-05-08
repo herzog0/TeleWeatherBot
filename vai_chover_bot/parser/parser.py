@@ -30,14 +30,22 @@ def parse(text: str) -> tuple:
 
     words = text.lower().strip().split()
 
-    if words[0] in ['/cadastro', 'cadastro', 'cadastrar']:
+    if words[0] in ['/set_dev_functions_on']:
+        return QuestionType.DEV_FUNCTIONS_ON, ['None']
+
+    elif words[0] in ['/set_dev_functions_off']:
+        return QuestionType.DEV_FUNCTIONS_OFF, ['None']
+
+    elif words[0] in ['/devhelp']:
+        return QuestionType.DEV_COMMANDS, ['None']
+
+    elif words[0] in ['/cadastro', 'cadastro', 'cadastrar']:
         return QuestionType.SET_SUBSCRIPTION, ['None']
 
-    if words[0] in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
-        print('entoru')
+    elif words[0] in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
         return QuestionType.INITIAL_MESSAGE, ['None']
 
-    if words[0] in ['/help', 'help', '/ajuda', 'ajuda', 'socorro']:
+    elif words[0] in ['/help', 'help', '/ajuda', 'ajuda', 'socorro']:
         return QuestionType.HELP_REQUEST, ['None']
 
     for word in words:

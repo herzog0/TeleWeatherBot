@@ -1,5 +1,6 @@
 from ..database import UserDAO, User
 
+
 class Handshake:
 
     def __init__(self):
@@ -14,12 +15,16 @@ class Handshake:
             currentBot.sendMessage(chat_id, 'Qual seu nome?')
             return
         state = self.subscriptionsState[chat_id]
+
         if state == 'nome':
             self.cadastrarNome(chat_id, text)
             currentBot.sendMessage(chat_id, 'Qual seu e-mail?')
+
         elif state == 'email':
             self.cadastrarEmail(chat_id, text)
             currentBot.sendMessage(chat_id, 'Qual a sua cidade?')
+            currentBot.update_user_dict(chat_id, subscribing=True)
+
         elif state == 'cidade':
             self.cadastrarCidade(chat_id, text)
             currentBot.sendMessage(chat_id, 'Obrigado por se cadastrar!! Aproveite nossas funcionalidades!!')
@@ -39,9 +44,11 @@ class Handshake:
         self.subscriptionsState[chat_id] = 'cidade'
         list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['email'] = email
 
+
     def cadastrarCidade(self, chat_id, cidade):
         del self.subscriptionsState[chat_id]
         list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['city'] = cidade
+        list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['inactive_time'] = 'tempo nulo'
         self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]))
         ## deletar de self.userDicts
 

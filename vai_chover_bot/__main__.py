@@ -14,10 +14,18 @@ def main():
 
         telegram_token = variables['TELEGRAM_TOKEN']
         open_weather_token = variables['OWM_TOKEN']
+        password = ""
+        try:
+            password = variables['PASSWORD']
+        except KeyError:
+            print("No password set, dev options not avaiable")
 
-        bot = WeatherBot(telegram_token, open_weather_token)
+        bot = WeatherBot(telegram_token, open_weather_token, password)
         bot.run_forever()
 
     except KeyError as key:
-        print('Variável não encontrada:', key, file=sys.stderr)
+        print(f'Erro ao encontrar o token {key}.\nTenha certeza de que os tokens estão de acordo com o modelo citado no'
+              ' arquivo README.md\n')
+    except FileNotFoundError:
+        print('O arquivo "TOKENS_HERE" deve ser criado na pasta raiz do projeto!\n')
 
