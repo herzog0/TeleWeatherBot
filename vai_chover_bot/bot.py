@@ -6,6 +6,7 @@ from .weather import WeatherAPI, NotFoundError
 from .parser import parser, QuestionType, CouldNotUnderstandException
 from .handshake import Handshake
 from .alerts.notification import Notification
+from .google_maps.geocode_functions import GoogleGeoCode
 
 from pyowm import OWM
 from pyowm.utils import geo
@@ -23,9 +24,11 @@ import vai_chover_bot.dev_functions as devfunc
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
 
-    def __init__(self, telegram_token: str, open_weather_token: str, password=""):
+    def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token:str, password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
+        self.gmaps = GoogleGeoCode(google_maps_token)
+
         self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
         if password == "":
@@ -77,11 +80,16 @@ class WeatherBot(telepot.Bot):
     def evaluate_text(self, msg):
         content_type, _, chat_id, msg_date, msg_id = telepot.glance(msg, long=True)
         text = msg['text']
+        full_adress = None
+        coords = None
         response = None
 
         try:
-            qtype, city = parser.parse(text)
-            city = city[0]
+            qtype, location = parser.parse(self, text)
+
+            if location:
+                full_adress = location[0]
+                coords = location[1]
 
             if qtype is QuestionType.DEV_FUNCTIONS_ON:
                 if self.password:
@@ -122,27 +130,30 @@ class WeatherBot(telepot.Bot):
                 Notification.set_notification_type(self, message_id)
 
             elif qtype is QuestionType.WEATHER:
-                weather = self._weather_api.getWeatherDescription(city)
-                response = f'Parece estar {weather} em {city}'
+                weather = self._weather_api.getWeatherDescription(coords)
+                response = f'Lá parece estar {weather}'
 
             elif qtype is QuestionType.IS_RAINY:
-                rainy = self._weather_api.isRainy(city)
-                response = f'Tá chovendo em {city} {"sim" if rainy else "não"}'
+                rainy = self._weather_api.isRainy(coords)
+                response = f'{"Está" if rainy else "Não está"} chovendo lá.'
 
             elif qtype is QuestionType.TEMPERATURE:
-                temp = self._weather_api.getTemperature(city)
-                response = f'Acho que tá {temp:.1f}°C  lá em {city}'
+                temp = self._weather_api.getTemperature(coords)
+                response = f'Lá parece estar {temp:.1f}°C '
 
             elif qtype is QuestionType.TEMP_VARIATION:
-                t_min, t_max = self._weather_api.getTempVariation(city)
+                t_min, t_max = self._weather_api.getTempVariation(coords)
                 if t_min != t_max:
                     response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
                 else:
                     response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
 
             if response:
+                self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
+                self.markdown_message(chat_id, full_adress)
                 self.simple_message(chat_id, response)
-
+        except AssertionError:
+            self.markdown_message(chat_id, '*Infelizmente não reconheci o nome do local :(*')
         except CouldNotUnderstandException:
             self.markdown_message(chat_id, '*Desculpe, mas não entendi*')
         except NotFoundError:
@@ -152,16 +163,23 @@ class WeatherBot(telepot.Bot):
 
         chat_id, message_id = self.get_message_id(msg)
 
-        if self.get_user_state(chat_id, key="SETTING_NOTIFICATION"):
+        coords = {'lat': msg['location']['latitude'], 'lng': msg['location']['longitude']}
 
-            pass
+        address = self.gmaps.get_user_address_by_coordinates(coords['lat'], coords['lng'])
+        self.markdown_message(chat_id, f'*{address}*')
+        weather = self._weather_api.getWeatherDescription(coords)
+        self.markdown_message(chat_id, weather)
 
-        elif self.get_user_state(chat_id, key="SUBSCRIBING"):
-            pass
-
-        else:
-            # forecast call
-            pass
+        # if self.get_user_state(chat_id, key="SETTING_NOTIFICATION"):
+        #
+        #     pass
+        #
+        # elif self.get_user_state(chat_id, key="SUBSCRIBING"):
+        #     pass
+        #
+        # else:
+        #     # forecast call
+        #     pass
 
     @staticmethod
     def get_message_id(msg):

@@ -16,7 +16,7 @@ Para tanto, usamos a [Open Weather Map](https://openweathermap.org/), API aberta
 
 ### Configurando ambiente
 
-Recomendamos a criação de um ambiente virtual do python 3 para rodar e trabalhar com o bot, basta rodar os comandos:
+Recomendamos a criação de um ambiente virtual do python 3 para rodar e trabalhar com o bot, basta rodar os comandos (no terminal):
 
 ```bash
 virtualenv -p python3 ~/.bot_environment
@@ -44,6 +44,8 @@ Para rodar são necessários os tokens de acesso ao [Telegram](https://core.tele
 ```
 TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
 OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
+GOOGLEMAPSTOKEN=0123456789abcdefghijklmnopqrstuvwxyz123
+PASSWORD=<opcional>
 ```
 
 E, só então, considerando o ambiente virtual ativado na sessão "configuração do ambiente", podemos rodar o bot com:

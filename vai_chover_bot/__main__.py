@@ -14,13 +14,14 @@ def main():
 
         telegram_token = variables['TELEGRAM_TOKEN']
         open_weather_token = variables['OWM_TOKEN']
+        google_maps_token = variables['GOOGLEMAPSTOKEN']
         password = ""
         try:
             password = variables['PASSWORD']
         except KeyError:
             print("No password set, dev options not avaiable")
 
-        bot = WeatherBot(telegram_token, open_weather_token, password)
+        bot = WeatherBot(telegram_token, open_weather_token, google_maps_token, password)
         bot.run_forever()
 
     except KeyError as key:

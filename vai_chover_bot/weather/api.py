@@ -19,35 +19,35 @@ class WeatherAPI:
         )
 
 
-    def _getWeather(self, city: str) -> Weather:
+    def _getWeather(self, coords) -> Weather:
         """
         Retorna um objeto da PyOWM, para uso interno da classe.
         Pode resultar em um NotFoundError da PyOWM também.
         """
-        observation = self._owm.weather_at_place(f'{city},BR')
+        observation = self._owm.weather_at_coords(coords['lat'], coords['lng'])
         return observation.get_weather()
 
-    def getWeatherDescription(self, city: str) -> str:
+    def getWeatherDescription(self, coords) -> str:
         """Busca a descrição do tempo da cidade"""
-        weather = self._getWeather(city)
+        weather = self._getWeather(coords)
         status = weather.get_detailed_status()
         return status.lower()
 
-    def getTemperature(self, city: str) -> float:
+    def getTemperature(self, coords) -> float:
         """Temperatura média da cidade"""
-        weather = self._getWeather(city)
+        weather = self._getWeather(coords)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp']
 
-    def getTempVariation(self, city: str) -> tuple:
+    def getTempVariation(self, coords) -> tuple:
         """Limites de temperatura da cidade"""
-        weather = self._getWeather(city)
+        weather = self._getWeather(coords)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp_min'], temp['temp_max']
 
-    def isRainy(self, city: str) -> bool:
+    def isRainy(self, coords) -> bool:
         """Teste se está chuvendo na cidade"""
-        weather = self._getWeather(city)
+        weather = self._getWeather(coords)
 
         # se o status diz, então tá chuvendo
         if weather.get_status().lower() == 'rain':
