@@ -24,6 +24,9 @@ class QuestionType(Enum):
     # criar notificações
     SET_ALARM       = auto()
 
+    # pergunta critica
+    WHEN            = auto()
+
     # cadastrar
     SET_SUBSCRIPTION = auto()
 

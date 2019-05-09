@@ -6,7 +6,7 @@ from .weather import WeatherAPI, NotFoundError
 from .parser import parser, QuestionType, CouldNotUnderstandException
 from .handshake import Handshake
 from .alerts.notification import Notification
-from .google_maps.geocode_functions import GoogleGeoCode
+from .google_maps.geocode_functions import GoogleGeoCode, LocationNotFoundException
 
 from pyowm import OWM
 from pyowm.utils import geo
@@ -24,7 +24,7 @@ import vai_chover_bot.dev_functions as devfunc
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
 
-    def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token:str, password=""):
+    def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token: str, password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self._weather_api = WeatherAPI(open_weather_token)
         self.gmaps = GoogleGeoCode(google_maps_token)
@@ -39,7 +39,8 @@ class WeatherBot(telepot.Bot):
         self.delta_counter = datetime.now()
 
         # Dicionário contendo os dicionários de cada usuário
-        self.user_dict = {'SETTING_NOTIFICATION': False, 'FORECAST': False, 'SUBSCRIBING': False, 'msg_time_delta': ""}
+        self.user_state_flags = {UserKeys.SETTING_NOTIFICATION_LOCATION: False, UserKeys.FORECAST: False,
+                                 UserKeys.SUBSCRIBING: False, UserKeys.SUBSCRIBED_PLACE: False, UserKeys.MSG_TIME_DELTA: ""}
         
         self.users_dict = {}
 
@@ -47,28 +48,31 @@ class WeatherBot(telepot.Bot):
 
         super().__init__(telegram_token)
 
-    def update_user_dict(self, chat_id, setting_notification=False, forecast=False, subscribing=False,
-                         only_delta_time_update=True):
+    def update_user_dict(self, chat_id, setting_notification_location=False, forecast=False, subscribing=False,
+                         only_delta_time_update=False):
         if chat_id not in self.users_dict:
-            self.users_dict[chat_id] = self.user_dict
-            self.users_dict[chat_id]['msg_time_delta'] = datetime.now()
+            self.users_dict[chat_id] = self.user_state_flags
+            self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA] = datetime.now()
 
         if not only_delta_time_update:
-            self.users_dict[chat_id]['SETTING_NOTIFICATION'] = setting_notification
-            self.users_dict[chat_id]['FORECAST'] = forecast
-            self.users_dict[chat_id]['SUBSCRIBING'] = subscribing
-        self.users_dict[chat_id]['msg_time_delta'] = datetime.now() - self.users_dict[chat_id]['msg_time_delta']
+            self.users_dict[chat_id][UserKeys.SETTING_NOTIFICATION_LOCATION] = setting_notification_location
+            self.users_dict[chat_id][UserKeys.FORECAST] = forecast
+            self.users_dict[chat_id][UserKeys.SUBSCRIBING] = subscribing
+        self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA] = \
+            datetime.now() - self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA]
 
     def update_database(self):
         pass
 
-    def get_user_state(self, chat_id, key=""):
-        assert self.users_dict[chat_id][key] is bool
+    def get_user_state(self, chat_id, key):
+        assert type(self.users_dict[chat_id][key]) is bool
         return self.users_dict[chat_id][key]
 
     def on_chat_message(self, msg):
 
         content_type, _, chat_id = telepot.glance(msg)
+
+        self.update_user_dict(chat_id, only_delta_time_update=True)
 
         # If the message is a text message
         if content_type == 'text':
@@ -85,7 +89,7 @@ class WeatherBot(telepot.Bot):
         response = None
 
         try:
-            qtype, location = parser.parse(self, text)
+            qtype, location = parser.parse(self, chat_id, text)
 
             if location:
                 full_adress = location[0]
@@ -118,7 +122,6 @@ class WeatherBot(telepot.Bot):
                 self.handshakeHandler.evaluateSubscription(self, chat_id, text)
 
             elif qtype is QuestionType.INITIAL_MESSAGE:
-                self.update_user_dict(chat_id)
                 self.start(chat_id)
 
             elif qtype is QuestionType.HELP_REQUEST:
@@ -129,57 +132,125 @@ class WeatherBot(telepot.Bot):
                 message_id = self.get_message_id(msg)
                 Notification.set_notification_type(self, message_id)
 
-            elif qtype is QuestionType.WEATHER:
-                weather = self._weather_api.getWeatherDescription(coords)
-                response = f'Lá parece estar {weather}'
+            # elif qtype is QuestionType.WEATHER:
+            #     weather = self._weather_api.getWeatherDescription(coords)
+            #     response = f'Lá parece estar {weather}'
+            #
+            # elif qtype is QuestionType.IS_RAINY:
+            #     rainy = self._weather_api.isRainy(coords)
+            #     response = f'{"Está" if rainy else "Não está"} chovendo lá.'
+            #
+            # elif qtype is QuestionType.TEMPERATURE:
+            #     temp = self._weather_api.getTemperature(coords)
+            #     response = f'Lá parece estar {temp:.1f}°C '
+            #
+            # elif qtype is QuestionType.TEMP_VARIATION:
+            #     t_min, t_max = self._weather_api.getTempVariation(coords)
+            #     if t_min != t_max:
+            #         response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
+            #     else:
+            #         response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+            #
+            # if response:
+            #     self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
+            #     self.markdown_message(chat_id, full_adress)
+            #     self.simple_message(chat_id, response)
 
-            elif qtype is QuestionType.IS_RAINY:
-                rainy = self._weather_api.isRainy(coords)
-                response = f'{"Está" if rainy else "Não está"} chovendo lá.'
 
-            elif qtype is QuestionType.TEMPERATURE:
-                temp = self._weather_api.getTemperature(coords)
-                response = f'Lá parece estar {temp:.1f}°C '
 
-            elif qtype is QuestionType.TEMP_VARIATION:
-                t_min, t_max = self._weather_api.getTempVariation(coords)
-                if t_min != t_max:
-                    response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
-                else:
-                    response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
 
-            if response:
-                self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
-                self.markdown_message(chat_id, full_adress)
-                self.simple_message(chat_id, response)
+
         except AssertionError:
             self.markdown_message(chat_id, '*Infelizmente não reconheci o nome do local :(*')
-        except CouldNotUnderstandException:
-            self.markdown_message(chat_id, '*Desculpe, mas não entendi*')
+        except CouldNotUnderstandException as e:
+            self.markdown_message(chat_id, f'{str(e)}')
+        except ValueError as e:
+            self.markdown_message(chat_id, f'{str(e)}')
         except NotFoundError:
             self.markdown_message(chat_id, '*Infelizmente não reconheci o nome da cidade :(*')
+        except LocationNotFoundException as e:
+            self.markdown_message(chat_id, str(e))
 
     def evaluate_location(self, msg):
 
         chat_id, message_id = self.get_message_id(msg)
-
         coords = {'lat': msg['location']['latitude'], 'lng': msg['location']['longitude']}
 
-        address = self.gmaps.get_user_address_by_coordinates(coords['lat'], coords['lng'])
-        self.markdown_message(chat_id, f'*{address}*')
-        weather = self._weather_api.getWeatherDescription(coords)
-        self.markdown_message(chat_id, weather)
+        try:
+            self.delete_message((chat_id, message_id))
 
-        # if self.get_user_state(chat_id, key="SETTING_NOTIFICATION"):
-        #
-        #     pass
-        #
-        # elif self.get_user_state(chat_id, key="SUBSCRIBING"):
-        #     pass
-        #
-        # else:
-        #     # forecast call
-        #     pass
+            address = self.gmaps.get_user_address_by_coordinates(coords['lat'], coords['lng'])
+            self.markdown_message(chat_id, f'*{address}*')
+            weather = self._weather_api.getWeatherDescription(coords)
+            self.markdown_message(chat_id, weather)
+        except LocationNotFoundException as e:
+            self.markdown_message(chat_id, str(e))
+            return
+
+        if self.get_user_state(chat_id, key=UserKeys.SETTING_NOTIFICATION_LOCATION):
+            self.users_dict[chat_id][UserKeys.NOTF_COORDS] = coords
+
+            pass
+
+        elif self.get_user_state(chat_id, key=UserKeys.SUBSCRIBING):
+            pass
+
+        else:
+            # forecast call
+            pass
+
+    def on_callback_query(self, callback_query):
+        query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
+
+        # Build message identification
+        message_id = self.get_message_id(callback_query)
+
+        # Navigate the callback if it came from the notifications setter
+        if query_data.split('.')[0] == 'notification':
+
+            info = query_data.split('.')
+            values = [0]
+            if info[1] == 'type':
+
+                if info[2] == 'daily':
+                    values = [1]
+
+                elif info[2] == 'trigger':
+                    values = [2]
+
+            elif info[1] == 'set':
+
+                if info[2] == 'location':
+                    self.update_user_dict(message_id[0], setting_notification_location=True)
+                    values = [3]
+
+                elif info[2] == 'place_name':
+                    self.update_user_dict(message_id[0], setting_notification_location=True)
+                    values = [4]
+
+                elif info[2] == 'go_back':
+                    self.update_user_dict(message_id[0])
+                    values = [5]
+
+            elif info[1] == 'get':
+
+                if info[2] == 'cancel':
+                    self.update_user_dict(message_id[0])
+                    if info[3] == 'by_location':
+                        values = [1]
+                    elif info[3] == 'by_place_name':
+                        values = [1]
+
+            options = {
+                "1": "Notification.set_daily_notification(self, message_id)",
+                "2": "",
+                "3": "Notification.set_daily_notification_by_location(self, message_id)",
+                "4": "Notification.set_daily_notification_by_place_name(self, message_id)",
+                "5": "Notification.set_notification_type(self, message_id, query_id)",
+            }
+
+            for value in values:
+                eval(options.get(str(value), "None"))
 
     @staticmethod
     def get_message_id(msg):
@@ -257,7 +328,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
 
-        # TODO: não usar MessageLoop, pq ele ignora o KeyboardInterrupt
+        # não usar MessageLoop, pq ele ignora o KeyboardInterrupt
 
         # MessageLoop(self, self._genHandler()).run_forever(*args, **kwargs)
 
@@ -266,57 +337,6 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             'callback_query': self.on_callback_query
         }
                     ).run_forever(*args, **kwargs)
-
-    def on_callback_query(self, callback_query):
-        query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
-
-        # Build message identification
-        message_id = self.get_message_id(callback_query)
-
-        # Navigate the callback if it came from the notifications setter
-        if query_data.split('.')[0] == 'notification':
-
-            info = query_data.split('.')
-            values = [0]
-            if info[1] == 'type':
-
-                if info[2] == 'daily':
-                    values = [1]
-
-                elif info[2] == 'trigger':
-                    values = [2]
-
-            elif info[1] == 'set':
-
-                if info[2] == 'location':
-                    self.update_user_dict(message_id[0], setting_notification=True)
-                    values = [3]
-
-                elif info[2] == 'city':
-                    self.update_user_dict(message_id[0], setting_notification=True)
-                    values = [4]
-
-                elif info[2] == 'go_back':
-                    self.update_user_dict(message_id[0])
-                    values = [5]
-
-            elif info[1] == 'get':
-
-                if info[2] == 'cancel':
-                    self.update_user_dict(message_id[0])
-                    if info[3] == 'by_location':
-                        values = [1]
-
-            options = {
-                "1": "Notification.set_daily_notification(self, message_id)",
-                "2": "",
-                "3": "Notification.set_daily_notification_by_location(self, message_id)",
-                "4": "Notification.set_daily_notification_by_city(self, message_id)",
-                "5": "Notification.set_notification_type(self, message_id, query_id)",
-            }
-
-            for value in values:
-                eval(options.get(str(value), "None"))
 
     def simple_message(self, chat_id, message, **kwargs):
         return self.sendMessage(chat_id, message, **kwargs)
@@ -338,3 +358,12 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
     def delete_message(self, message_id):
         return self.deleteMessage(message_id)
+
+
+class UserKeys:
+    SETTING_NOTIFICATION_LOCATION = 'SETTING_NOTIFICATION_LOCATION'
+    SUBSCRIBING = 'SUBSCRIBING'
+    FORECAST = 'FORECAST'
+    MSG_TIME_DELTA = 'MSG_TIME_DELTA'
+    NOTF_COORDS = 'NOTF_COORDS'
+    SUBSCRIBED_PLACE = 'SUBSCRIBED_PLACE'

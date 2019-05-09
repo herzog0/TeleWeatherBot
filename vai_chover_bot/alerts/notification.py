@@ -34,7 +34,7 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='Localização atual', callback_data='notification.set.location')],
-            [InlineKeyboardButton(text='Diga uma cidade', callback_data='notification.set.city')],
+            [InlineKeyboardButton(text='Diga o nome de um lugar', callback_data='notification.set.place_name')],
             [InlineKeyboardButton(text='<< Voltar', callback_data='notification.set.go_back')]
         ])
 
@@ -57,19 +57,17 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
         chat_id = message_id[0]
 
         # Envia um botão que aparece no campo de digitação
-        msg_kbd_location = bot_instance.markdown_message(chat_id=chat_id, message=message, reply_markup=keyboard)
+        bot_instance.markdown_message(chat_id=chat_id, message=message, reply_markup=keyboard)
 
         # Edita o teclado de seleção de "notificação por cidade ou por localização"
         bot_instance.edit_message(message_id, message="*Aguardando seu envio de localização...*", keyboard=keyboard_2)
 
-        bot_instance.delete_message(bot_instance.get_message_id(msg_kbd_location))
-
     @staticmethod
-    def set_daily_notification_by_city(bot_instance, message_id):
-        msg_edit = """Envie o nome da cidade para a qual deseja receber notificações"""
+    def set_daily_notification_by_place_name(bot_instance, message_id):
+        msg_edit = """Envie o nome de um lugar para a qual deseja receber notificações"""
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text='<< Voltar', callback_data='notification.get.cancel.by_city')]
+            [InlineKeyboardButton(text='<< Voltar', callback_data='notification.get.cancel.by_place_name')]
         ])
 
         bot_instance.edit_message(message_id, msg_edit, keyboard)
@@ -80,3 +78,7 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
         pass
 
 
+    @staticmethod
+    def set_daily_notification_hour():
+        msg_edit = """"""
+        pass
