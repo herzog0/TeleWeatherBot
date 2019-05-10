@@ -1,3 +1,4 @@
+
 """
 Wrapper simples em cima do PyOWM, para simplificar as funcionalidades e reduzir os dicts de json
 """
