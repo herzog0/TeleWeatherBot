@@ -139,7 +139,7 @@ def find_tag_date_pairs(requests: list):
                     while j < len(requests) and requests[j] == []:
                         j += 1
 
-                    if isinstance(requests[j], int):
+                    if not j == len(requests) and isinstance(requests[j], int):
                         _date = requests[date_index].replace(hour=requests[j])
 
                     pairs.append((requests[i], _date))
