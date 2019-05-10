@@ -28,9 +28,11 @@ def find_date(word: str):
     Retorna a data correspondente à palavra inserida
     """
 
-    week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo', 'amanha', 'haja', 'hoje']
+    week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
+                 'amanha',
+                 'haja', 'hoje', 'agora']
 
-    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 
     def less_than_five_days(value, m=False, w=False):
 
@@ -89,7 +91,7 @@ def find_date(word: str):
             day_index = week_days.index(list(filter(lambda x: x in week_days, sug_words))[0])
         except IndexError:
             return []
-        if day_index in [8, 9]:
+        if day_index in [8, 9, 10]:
             return less_than_five_days(datetime.datetime.now().weekday(), w=True)
         elif day_index == 7:
             return less_than_five_days((datetime.datetime.now().weekday() + 1) % 7, w=True)
@@ -107,6 +109,18 @@ def find_request_type(word: str):
             return weather_type
 
 
+def find_hour(word: str):
+    words = word.split('h')
+    if len(words) == 1:
+        return
+    try:
+        if not 0 <= int(words[0]) <= 23:
+            return
+        return words[0]
+    except ValueError:
+        return
+
+
 def find_tag_date_pairs(requests: list):
 
     pairs = []
@@ -117,8 +131,18 @@ def find_tag_date_pairs(requests: list):
             j = i + 1
             while j < len(requests):
                 if isinstance(requests[j], date_type):
-                    pairs.append((requests[i], requests[j]))
+
+                    date_index = j
+
+                    _date = requests[j]
                     j += 1
+                    while j < len(requests) and requests[j] == []:
+                        j += 1
+
+                    if isinstance(requests[j], int):
+                        _date = requests[date_index].replace(hour=requests[j])
+
+                    pairs.append((requests[i], _date))
                 else:
                     break
         i += 1
@@ -169,10 +193,13 @@ def parse(bot, chat_id, text: str) -> tuple:
         for word in sentence:
             try1 = find_date(word)
             try2 = find_request_type(word)
+            try3 = find_hour(word)
             if try1:
                 request.append(try1)
             elif try2:
                 request.append(try2)
+            elif try3:
+                request.append(int(try3))
             else:
                 request.append([])
 

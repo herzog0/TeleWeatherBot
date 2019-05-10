@@ -27,8 +27,8 @@ class WeatherBot(telepot.Bot):
 
     def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token: str, password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
-        self._owm_api = WeatherAPI(open_weather_token)
-        self._gmaps = GoogleGeoCode(google_maps_token)
+        self.owm_api = WeatherAPI(open_weather_token)
+        self.gmaps = GoogleGeoCode(google_maps_token)
 
         self.handshakeHandler = Handshake()
         self.subscriptionsState = {}
@@ -143,23 +143,29 @@ class WeatherBot(telepot.Bot):
                     tag_date = pair[1]
 
                     if tag is WeatherTypes.WEATHER:
-                        weather = self._owm_api.get_weather_description(coords, tag_date)
-                        response = f'{self.date_string(tag_date)}Lá parece estar {weather}'
+                        weather = self.owm_api.get_weather_description(coords, tag_date)
+                        temp = self.owm_api.get_temperature(coords, tag_date)
+
+                        response = f'{self.date_string(tag_date)}' \
+                            f'{weather.capitalize()}' \
+                            f'Temperatura atual: {temp:.1f}°C' \
 
                     elif tag is WeatherTypes.TEMPERATURE:
-                        temp = self._owm_api.get_temperature(coords, tag_date)
-                        t_min, t_max = self._owm_api.get_temp_variation(coords, tag_date)
+                        temp = self.owm_api.get_temperature(coords, tag_date)
+                        t_min, t_max = self.owm_api.get_temp_variation(coords, tag_date)
                         if t_min != t_max:
-                            response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C e ' \
-                                f'agora tá fazendo {temp:.1f}°C'
+                            response = f'{self.date_string(tag_date)}' \
+                                f'Temperatura mínima: {t_min:.1f}°C\n' \
+                                f'Temperatura máxima: {t_max:.1f}°C\n' \
+                                f'Temperatura atual: {temp:.1f}°C'
                         else:
-                            response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+                            response = f'Temperatura em torno de {t_max:.1f}°C'
 
                     elif tag is WeatherTypes.HUMIDITY:
                         self.markdown_message(chat_id, "eh humidade")
 
                     elif tag is WeatherTypes.IS_RAINY:
-                        rainy = self._owm_api.is_rainy(coords, tag_date)
+                        rainy = self.owm_api.is_rainy(coords, tag_date)
                         response = f'{"Está" if rainy else "Não está"} chovendo lá.'
 
                     elif tag is WeatherTypes.IS_SUNNY:

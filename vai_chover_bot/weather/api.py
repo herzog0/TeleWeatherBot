@@ -17,10 +17,7 @@ class WeatherAPI:
             # adiciona um cache simples pra tentar reduzir os requests
         )
 
-
-
-
-    def get_weather(self, coords) -> Weather:
+    def get_weather(self, coords, date) -> Weather:
         """
         Retorna um objeto da PyOWM, para uso interno da classe.
         Pode resultar em um NotFoundError da PyOWM também.
@@ -30,25 +27,25 @@ class WeatherAPI:
 
     def get_weather_description(self, coords, date) -> str:
         """Busca a descrição do tempo no lugar"""
-        weather = self.get_weather(coords)
+        weather = self.get_weather(coords, date)
         status = weather.get_detailed_status()
         return status.lower()
 
     def get_temperature(self, coords, date) -> float:
         """Temperatura média no lugar"""
-        weather = self.get_weather(coords)
+        weather = self.get_weather(coords, date)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp']
 
     def get_temp_variation(self, coords, date) -> tuple:
         """Limites de temperatura no lugar"""
-        weather = self.get_weather(coords)
+        weather = self.get_weather(coords, date)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp_min'], temp['temp_max']
 
     def is_rainy(self, coords, date) -> bool:
         """Teste se está chovendo no lugar"""
-        weather = self.get_weather(coords)
+        weather = self.get_weather(coords, date)
 
         # se o status diz, então tá chuvendo
         if weather.get_status().lower() == 'rain':
