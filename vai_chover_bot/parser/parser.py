@@ -53,16 +53,23 @@ def find_days_of_forecast(text: str):
             continue
         i += 1
 
-    print(sug_words)
     i = 0
     while i < len(sug_words):
         j = 0
         while j < len(sug_words[i]):
             if sug_words[i][j] in week_days:
                 days['week'][i] = week_days.index(sug_words[i][j])
+            elif sug_words[i][j] in ['hoje', 'hj', 'oje']:
+                days['week'][i] = datetime.now().weekday()
+            elif sug_words[i][j] in ['amanhã', 'amnha', 'amanha']:
+                days['week'][i] = (datetime.now().weekday()+1) % 7
             j += 1
         sug_words[i] = ""
         i += 1
+
+    if not days['week'] and not days['month']:
+        # assume que é hoje então e responde
+        days['week'][len(words)-1] = datetime.now().weekday()
 
     """Aqui já temos todos os dias pedidos pelo usuário, devemos encontrar suas datas respectivas, se estas forem
     menores do que 5 dias à frente"""
@@ -157,7 +164,7 @@ def find_request_types(text: str):
     humidity_dict = {QuestionType.HUMIDITY: ['umidade', 'humidade', 'abafado', 'abafar']}
 
     rainy_dict = {QuestionType.IS_RAINY: ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera',
-                                          'pingar', 'molhar']}
+                                          'pingar', 'molhar', 'chovendo', 'chuvendo', 'molhando', 'pingando']}
 
     sunny_dict = {QuestionType.IS_SUNNY: ['sol']}
 
@@ -216,8 +223,6 @@ def find_tag_date_pairs(requests: list):
 def parse(bot, chat_id, text: str) -> tuple:
     """Tentar ler a questão do usuário e decidir seu tipo e o que precisa para respondê-lo"""
 
-    # TODO MELHORAR O ENTENDIMENTO DE PERGUNTAS SOBRE O CLIMA
-
     words = text.lower().strip().split()
 
     if words[0] in ['/set_dev_functions_on']:
@@ -244,7 +249,8 @@ def parse(bot, chat_id, text: str) -> tuple:
 
     """ Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática """
 
-    if ('em' not in words and not bot.users_dict[chat_id][UserKeys.SUBSCRIBED_PLACE]) or words.index('em') == len(words)-1:
+    if ('em' not in words and not bot.users_dict[chat_id][UserKeys.SUBSCRIBED_PLACE]) or\
+            words.index('em') == len(words)-1:
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
                                           " do lugar ao final da frase (e apenas um lugar), antecedido pela palavra "
@@ -252,7 +258,6 @@ def parse(bot, chat_id, text: str) -> tuple:
                                           "Para mais informações, digite '*ajuda pesquisa*'")
     else:
         location = None
-        place_name = ""
         if 'em' in words:
             place_name = words[words.index('em') + 1:]
             place_name = " ".join(place_name)
@@ -262,6 +267,8 @@ def parse(bot, chat_id, text: str) -> tuple:
                                                   "inserir outro nome após a palavra-chave *em*.")
             request = words[:words.index('em')]
         else:
+
+            # todo location = bot.get_user_data(chat_id, location=True)
             request = words
 
         request = " ".join(request)
@@ -270,15 +277,10 @@ def parse(bot, chat_id, text: str) -> tuple:
         req_types = find_request_types(request)
         all_values = req_types + forecast_days
         sorted_requests = sorted(all_values, key=itemgetter('index'))
-        for item in sorted_requests:
-            print(item)
 
         pairs = find_tag_date_pairs(sorted_requests)
 
-        for pair in pairs:
-            print(pair)
-
-        return sorted_requests, location
+        return pairs, location
 
 
 class UserKeys:

@@ -91,74 +91,95 @@ class WeatherBot(telepot.Bot):
         try:
             qtype, location = parser.parse(self, chat_id, text)
 
-            if location:
+            if not location:
+                if qtype is QuestionType.DEV_FUNCTIONS_ON:
+                    if self.password:
+                        if chat_id in self.dev_dict and self.dev_dict[chat_id]['DEV']:
+                            self.markdown_message(chat_id, "*Você já é developer!*")
+                        elif devfunc.validate_password(self, msg):
+                            devfunc.set_dev_user(self, msg)
+                    else:
+                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+                elif qtype is QuestionType.DEV_FUNCTIONS_OFF:
+                    if self.password:
+                        devfunc.set_dev_user(self, msg, on=False)
+                    else:
+                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+                elif qtype is QuestionType.DEV_COMMANDS:
+                    if self.password:
+                        devfunc.list_developer_commands(self, msg)
+                    else:
+                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+
+                elif qtype is QuestionType.SET_SUBSCRIPTION \
+                        or self.handshakeHandler.checkHandshakeStatus(chat_id):
+                    #
+                    self.handshakeHandler.evaluateSubscription(self, chat_id, text)
+
+                elif qtype is QuestionType.INITIAL_MESSAGE:
+                    self.start(chat_id)
+
+                elif qtype is QuestionType.HELP_REQUEST:
+                    #
+                    self.help(chat_id, text)
+
+                elif qtype is QuestionType.SET_ALARM:
+                    message_id = self.get_message_id(msg)
+                    Notification.set_notification_type(self, message_id)
+
+            else:
                 full_adress = location[0]
                 coords = location[1]
+                pairs = qtype
 
-            if qtype is QuestionType.DEV_FUNCTIONS_ON:
-                if self.password:
-                    if chat_id in self.dev_dict and self.dev_dict[chat_id]['DEV']:
-                        self.markdown_message(chat_id, "*Você já é developer!*")
-                    elif devfunc.validate_password(self, msg):
-                        devfunc.set_dev_user(self, msg)
-                else:
-                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+                self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
+                self.markdown_message(chat_id, full_adress)
+                self.markdown_message(chat_id, "*-------------------------------*")
+                for pair in pairs:
+                    print(pair)
+                    if pair[0]['tag'] is QuestionType.WEATHER:
+                        weather = self._weather_api.getWeatherDescription(coords)
+                        response = f'Lá parece estar {weather}'
 
-            elif qtype is QuestionType.DEV_FUNCTIONS_OFF:
-                if self.password:
-                    devfunc.set_dev_user(self, msg, on=False)
-                else:
-                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+                    elif pair[0]['tag'] is QuestionType.TEMPERATURE:
+                        temp = self._weather_api.getTemperature(coords)
+                        t_min, t_max = self._weather_api.getTempVariation(coords)
+                        if t_min != t_max:
+                            response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C e ' \
+                                f'agora tá fazendo {temp:.1f}°C'
+                        else:
+                            response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
 
-            elif qtype is QuestionType.DEV_COMMANDS:
-                if self.password:
-                    devfunc.list_developer_commands(self, msg)
-                else:
-                    self.markdown_message(chat_id, "*Modo developer não configurado*")
+                    elif pair[0]['tag'] is QuestionType.HUMIDITY:
+                        self.markdown_message(chat_id, "eh humidade")
 
-            elif qtype is QuestionType.SET_SUBSCRIPTION \
-                    or self.handshakeHandler.checkHandshakeStatus(chat_id):
-                #
-                self.handshakeHandler.evaluateSubscription(self, chat_id, text)
+                    elif pair[0]['tag'] is QuestionType.IS_RAINY:
+                        rainy = self._weather_api.isRainy(coords)
+                        response = f'{"Está" if rainy else "Não está"} chovendo lá.'
 
-            elif qtype is QuestionType.INITIAL_MESSAGE:
-                self.start(chat_id)
+                    elif pair[0]['tag'] is QuestionType.IS_SUNNY:
+                        self.markdown_message(chat_id, "eh sol")
 
-            elif qtype is QuestionType.HELP_REQUEST:
-                #
-                self.help(chat_id, text)
+                    elif pair[0]['tag'] is QuestionType.IS_CLOUDY:
+                        self.markdown_message(chat_id, "eh nuvem")
 
-            elif qtype is QuestionType.SET_ALARM:
-                message_id = self.get_message_id(msg)
-                Notification.set_notification_type(self, message_id)
-
-            # elif qtype is QuestionType.WEATHER:
-            #     weather = self._weather_api.getWeatherDescription(coords)
-            #     response = f'Lá parece estar {weather}'
+                    if response:
+                        self.markdown_message(chat_id, response)
             #
-            # elif qtype is QuestionType.IS_RAINY:
-            #     rainy = self._weather_api.isRainy(coords)
-            #     response = f'{"Está" if rainy else "Não está"} chovendo lá.'
             #
             # elif qtype is QuestionType.TEMPERATURE:
-            #     temp = self._weather_api.getTemperature(coords)
             #     response = f'Lá parece estar {temp:.1f}°C '
             #
             # elif qtype is QuestionType.TEMP_VARIATION:
-            #     t_min, t_max = self._weather_api.getTempVariation(coords)
-            #     if t_min != t_max:
-            #         response = f'Aqui diz: mínima de {t_min:.1f}°C e máxima de {t_max:.1f}°C'
-            #     else:
-            #         response = f'Nem sei, mas deve ficar perto de {t_max:.1f}°C'
+            #
+            #
             #
             # if response:
             #     self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
             #     self.markdown_message(chat_id, full_adress)
             #     self.simple_message(chat_id, response)
-
-
-
-
 
         except AssertionError:
             self.markdown_message(chat_id, '*Infelizmente não reconheci o nome do local :(*')
