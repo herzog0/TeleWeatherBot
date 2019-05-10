@@ -2,5 +2,5 @@
 Parser das questões do usuário
 """
 
-from .question import QuestionType, CouldNotUnderstandException
-from .parser import parse
+from .question import WeatherTypes, FunctionalTypes, CouldNotUnderstandException
+from .parser import parse, MoreThanFiveDaysException

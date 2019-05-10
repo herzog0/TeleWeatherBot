@@ -2,10 +2,11 @@
 O parser propriamente
 """
 import enchant
-from .question import QuestionType, CouldNotUnderstandException
-from datetime import datetime, timedelta
+from .question import WeatherTypes, FunctionalTypes, CouldNotUnderstandException
+import datetime
+from datetime import timedelta
+from datetime import date as date_type
 from calendar import monthrange
-from operator import itemgetter
 
 
 def address(bot, place_name):
@@ -15,187 +16,95 @@ def address(bot, place_name):
     return full_address, coordinates
 
 
-def list_of_suggestions(words):
+def list_of_suggestions(word: str):
+    if not len(word.split()) == 1:
+        raise ValueError("lista de sugestões deve receber apenas uma palavra")
     d = enchant.Dict('pt_BR')
-    full_suggestions = []
-    for word in words:
-        full_suggestions.append(d.suggest(word))
-    return full_suggestions
+    return d.suggest(word)
 
 
-def find_days_of_forecast(text: str):
-    """A partir do dia atual, retorna
-    uma lista com todos os dias que devem aparecer na previsão.
-    Os objetos desta lista são do tipo datetime.datetime.
-    No máximo 5 dias após o dia atual (contando com ele) são válidos para pesquisa.
-    Ordem dos dias da semana de acordo com datetime.datetime.
-
-    Retorna uma lista com dicionários.
-    Cada dicionário contém o índice em que aquele dia aparece
-    na frase do usuário e sua respectiva data.
+def find_date(word: str):
+    """
+    Retorna a data correspondente à palavra inserida
     """
 
-    week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo']
+    week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo', 'amanha', 'haja', 'hoje']
 
-    words = text.lower().strip().split()
-    sug_words = list_of_suggestions(words)
-
-    days = {'month': {}, 'week': {}}
-
-    i = 0
-    while i < len(words):
-        try:
-            int(words[i])
-            days['month'][i] = int(words[i])
-            words[0] = ""
-        except ValueError:
-            i += 1
-            continue
-        i += 1
-
-    i = 0
-    while i < len(sug_words):
-        j = 0
-        while j < len(sug_words[i]):
-            if sug_words[i][j] in week_days:
-                days['week'][i] = week_days.index(sug_words[i][j])
-            elif sug_words[i][j] in ['hoje', 'hj', 'oje']:
-                days['week'][i] = datetime.now().weekday()
-            elif sug_words[i][j] in ['amanhã', 'amnha', 'amanha']:
-                days['week'][i] = (datetime.now().weekday()+1) % 7
-            j += 1
-        sug_words[i] = ""
-        i += 1
-
-    if not days['week'] and not days['month']:
-        # assume que é hoje então e responde
-        days['week'][len(words)-1] = datetime.now().weekday()
-
-    """Aqui já temos todos os dias pedidos pelo usuário, devemos encontrar suas datas respectivas, se estas forem
-    menores do que 5 dias à frente"""
+    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
     def less_than_five_days(value, m=False, w=False):
 
         if w:
-            now = datetime.now()
+            now = datetime.datetime.now()
             wk_days_left = 7 - now.weekday()
 
-            if value - now.weekday() >= 5:
-                raise ValueError(f"*Este dia ({week_days[value]}) está muito distante*")
-
-            elif value - now.weekday() < 0:
-                delta_days = wk_days_left + value
-
-                if delta_days > 5:
-                    raise ValueError(f"*Este dia ({week_days[value]}) está muito distante*")
-
-            else:
+            if 0 <= value - now.weekday() <= 5:
                 delta_days = value - now.weekday()
+            elif 0 <= wk_days_left + value <= 5:
+                delta_days = wk_days_left + value
+            else:
+                raise MoreThanFiveDaysException(f"*{week_days[value].capitalize()} está muito distante*\n"
+                                                f"Escolha uma data no máximo 5 dias à frente")
 
             if not delta_days and not delta_days == 0:
-                raise ValueError(f"*Esta data (dia {value} semana) nao faz o menor sentido.*")
+                raise MoreThanFiveDaysException(f"*{value} nao faz o menor sentido.*")
 
             return now + timedelta(delta_days)
 
         elif m:
-            now = datetime.now()
+            now = datetime.datetime.now()
 
-            """# se não for maior igual a um, tá errado se for maior que o range desse mês, significa que se refere ao
-             fim do mês seguinte e portanto, é maior que 5 dias."""
+            # se não for maior igual a um, tá errado se for maior que o range desse mês, significa que se refere ao
+            # fim do mês seguinte e portanto, é maior que 5 dias.
 
             if not 1 <= value <= monthrange(now.year, now.month)[1]:
-                raise ValueError(f"*A data que você inseriu (dia {value}) não existe ou está muito distante.*")
+                raise MoreThanFiveDaysException(
+                    f"*O dia {value} não existe ou está muito distante*\n"
+                    f"Escolha uma data no máximo 5 dias à frente")
 
             mth_days_left = monthrange(now.year, now.month)[1] - now.day
 
             # se a data estiver muito à frente
 
-            if value - now.day > 5:
-                raise ValueError(f"*A data inserida (dia {value}) está muito distante.*")
-
-            # se a data estiver abaixo do dia de hoje, suponha que estamos falando do mes que vem
-
-            elif value - now.day < 0:
-                delta_days = mth_days_left + value
-
-                if delta_days > 5:
-                    raise ValueError(f"*A data inserida (dia {value} do mês que vem) está muito distante.*")
-
-            # se estiver no intervalo de 5 dias
-            else:
+            if 0 <= value - now.day <= 5:
                 delta_days = value - now.day
+            elif 0 <= mth_days_left + value <= 5:
+                delta_days = mth_days_left + value
+            else:
+                raise MoreThanFiveDaysException(f"*Dia {value}) está muito distante*\n"
+                                                f"Escolha uma data no máximo 5 dias à frente")
 
             if not delta_days and not delta_days == 0:
-                raise ValueError(f"*Esta data (dia {value} mês) nao faz o menor sentido.*")
+                raise MoreThanFiveDaysException(f"*Dia {value} mês) nao faz o menor sentido")
 
             return now + timedelta(delta_days)
 
-    dates = []
-
-    for i, v in days['month'].items():
+    word = word.lower().strip()
+    try:
+        int(word)
+        return less_than_five_days(int(word), m=True)
+    except ValueError:
+        sug_words = list_of_suggestions(word)
         try:
-            r = less_than_five_days(v, m=True)
-            ddate = {'index': i, 'date': r}
-            dates.append(ddate)
-        except ValueError as e:
-            raise e
-
-    for i, v in days['week'].items():
-        try:
-            r = less_than_five_days(v, w=True)
-            ddate = {'index': i, 'date': r}
-            dates.append(ddate)
-        except ValueError as e:
-            raise e
-
-    return dates
+            day_index = week_days.index(list(filter(lambda x: x in week_days, sug_words))[0])
+        except IndexError:
+            return []
+        if day_index in [8, 9]:
+            return less_than_five_days(datetime.datetime.now().weekday(), w=True)
+        elif day_index == 7:
+            return less_than_five_days((datetime.datetime.now().weekday() + 1) % 7, w=True)
+        else:
+            return less_than_five_days(day_index, w=True)
+    except MoreThanFiveDaysException as e:
+        raise e
 
 
-def find_request_types(text: str):
-    words = text.lower().strip().split()
-    sug_words = list_of_suggestions(words)
+def find_request_type(word: str):
+    sug_words = list_of_suggestions(word)
 
-    when_dict = {QuestionType.WHEN: ['quando']}
-
-    weather_dict = {QuestionType.WEATHER: ['clima', 'tempo', 'previsao', 'previsão', 'previa', 'provisor', 'prosa']}
-
-    temperature_dict = {QuestionType.TEMPERATURE: ['temperatura', 'calor', 'frio', 'quente']}
-
-    humidity_dict = {QuestionType.HUMIDITY: ['umidade', 'humidade', 'abafado', 'abafar']}
-
-    rainy_dict = {QuestionType.IS_RAINY: ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera',
-                                          'pingar', 'molhar', 'chovendo', 'chuvendo', 'molhando', 'pingando']}
-
-    sunny_dict = {QuestionType.IS_SUNNY: ['sol']}
-
-    cloudy_dict = {QuestionType.IS_CLOUDY: ['nublado', 'nuvem', 'sombra']}
-
-    weather_dicts = [when_dict,
-                     weather_dict,
-                     temperature_dict,
-                     humidity_dict,
-                     rainy_dict,
-                     sunny_dict,
-                     cloudy_dict]
-
-    requests = []
-
-    for sgwd in range(0, len(sug_words)):
-        # Para cada lista de palavras sugeridas
-        for qtdict in weather_dicts:
-            # Para cada dicionário em weather_dicts
-
-            tags = [tag for tag in qtdict.values()][0]
-            # A lista de tags para cada question type
-
-            if any(possible_tag in tags for possible_tag in sug_words[sgwd]):
-                # Se qualquer palavra na lista de palavras  sugeridas for encontrada na lista de tags
-
-                key = [k for k in qtdict.keys()][0]
-                drequest = {'index': sgwd, 'tag': key}
-                requests.append(drequest)
-                break
-    return requests
+    for weather_type in WeatherTypes:
+        if any(word in weather_type.value for word in sug_words):
+            return weather_type
 
 
 def find_tag_date_pairs(requests: list):
@@ -204,15 +113,18 @@ def find_tag_date_pairs(requests: list):
 
     i = 0
     while i < len(requests) - 1:
-        if 'tag' in requests[i]:
+        if isinstance(requests[i], WeatherTypes):
             j = i + 1
             while j < len(requests):
-                if 'date' in requests[j]:
+                if isinstance(requests[j], date_type):
                     pairs.append((requests[i], requests[j]))
                     j += 1
                 else:
                     break
         i += 1
+
+    if isinstance(requests[len(requests) - 1], WeatherTypes):
+        pairs.append((requests[i], datetime.datetime.now()))
 
     return pairs
 
@@ -225,32 +137,14 @@ def parse(bot, chat_id, text: str) -> tuple:
 
     words = text.lower().strip().split()
 
-    if words[0] in ['/set_dev_functions_on']:
-        return QuestionType.DEV_FUNCTIONS_ON, None
+    for functional_type in FunctionalTypes:
+        if any(word in functional_type.value for word in words):
+            return functional_type, None
 
-    elif words[0] in ['/set_dev_functions_off']:
-        return QuestionType.DEV_FUNCTIONS_OFF, None
+    # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
 
-    elif words[0] in ['/devhelp']:
-        return QuestionType.DEV_COMMANDS, None
-
-    elif words[0] in ['/cadastro', 'cadastro', 'cadastrar']:
-        return QuestionType.SET_SUBSCRIPTION, None
-
-    elif words[0] in ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']:
-        return QuestionType.INITIAL_MESSAGE, None
-
-    elif words[0] in ['/help', 'help', '/ajuda', 'ajuda', 'socorro']:
-        return QuestionType.HELP_REQUEST, None
-
-    for word in words:
-        if word in ('alarme', 'alerta', 'aviso', 'avise', 'notificacao', 'not'):
-            return QuestionType.SET_ALARM, None
-
-    """ Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática """
-
-    if ('em' not in words and not bot.users_dict[chat_id][UserKeys.SUBSCRIBED_PLACE]) or\
-            words.index('em') == len(words)-1:
+    if ('em' not in words and not bot.users_dict[chat_id][UserKeys.SUBSCRIBED_PLACE]) or \
+            words.index('em') == len(words) - 1:
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
                                           " do lugar ao final da frase (e apenas um lugar), antecedido pela palavra "
@@ -265,22 +159,32 @@ def parse(bot, chat_id, text: str) -> tuple:
             if not location:
                 raise CouldNotUnderstandException("*Infelizmente não encontrei um local de pesquisa válido.* Tente "
                                                   "inserir outro nome após a palavra-chave *em*.")
-            request = words[:words.index('em')]
+            sentence = words[:words.index('em')]
         else:
 
             # todo location = bot.get_user_data(chat_id, location=True)
-            request = words
+            sentence = words
 
-        request = " ".join(request)
+        request = []
+        for word in sentence:
+            try1 = find_date(word)
+            try2 = find_request_type(word)
+            if try1:
+                request.append(try1)
+            elif try2:
+                request.append(try2)
+            else:
+                request.append([])
 
-        forecast_days = find_days_of_forecast(request)
-        req_types = find_request_types(request)
-        all_values = req_types + forecast_days
-        sorted_requests = sorted(all_values, key=itemgetter('index'))
-
-        pairs = find_tag_date_pairs(sorted_requests)
+        pairs = find_tag_date_pairs(request)
 
         return pairs, location
+
+
+class MoreThanFiveDaysException(Exception):
+    def __init__(self, source_text: str = None):
+        if source_text:
+            self.source_text = source_text
 
 
 class UserKeys:

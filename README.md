@@ -25,11 +25,15 @@ source ~/.bot_environment/bin/activate
 
 Agora que estamos em um ambiente seguramente separado do ambiente pessoal, podemos instalar os pacotes necessários listados em "requirements.txt".
 
+Você pode instalá-los um por um como a seguir:
+
 ```bash
 pip install <pacote 1> 
 pip install <pacote 2>
 pip install <etc...>
 ```
+
+Ou, tente configurar um caminho para 'requirements.txt' no seu software de desenvolvimento.
 
 Para sair deste ambiente virtual, basta digitar:
 

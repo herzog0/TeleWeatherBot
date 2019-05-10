@@ -6,42 +6,52 @@ from enum import Enum, auto, unique
 
 
 @unique
-class QuestionType(Enum):
+class WeatherTypes(Enum):
     """Tipos de questões dos usuários"""
 
     # descrições gerais
-    WEATHER         = auto()
-    # valores numéricos
-    TEMPERATURE     = auto()
-    HUMIDITY        = auto()
-    # limites de valores
-    TEMP_VARIATION  = auto()
-    # testes de tempo
-    IS_RAINY        = auto()
-    IS_SUNNY        = auto()
-    IS_CLOUDY       = auto()
+    WEATHER = ['clima', 'tempo', 'previsao', 'previsão', 'previa', 'provisor', 'prosa']
 
-    # criar notificações
-    SET_ALARM       = auto()
+    # valores numéricos
+    TEMPERATURE = ['temperatura', 'calor', 'frio', 'quente']
+
+    HUMIDITY = ['umidade', 'humidade', 'abafado', 'abafar']
+    # limites de valores
+
+    TEMP_VARIATION = ['variacao', 'variação', 'variar']
+    # testes de tempo
+
+    IS_RAINY = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
+                'chuvendo', 'molhando', 'pingando']
+
+    IS_SUNNY = ['sol']
+
+    IS_CLOUDY = ['nublado', 'nuvem', 'sombra']
 
     # pergunta critica
-    WHEN            = auto()
+    WHEN = ['quando']
+
+
+@unique
+class FunctionalTypes(Enum):
+
+    # criar notificações
+    SET_ALARM = ['alarme', 'alerta', 'aviso', 'avise', 'notificacao', 'not', '/alarme', '/notificacao', 'notificação']
 
     # cadastrar
-    SET_SUBSCRIPTION = auto()
+    SET_SUBSCRIPTION = ['/cadastro', 'cadastro', 'cadastrar']
 
     # início do bot
-    INITIAL_MESSAGE = auto()
+    INITIAL_MESSAGE = ['/start', 'start', 'começar', 'comecar', 'inicio', 'início', 'oi', 'ola']
 
     # pedido de ajuda
-    HELP_REQUEST = auto()
+    HELP_REQUEST = ['/help', 'help', '/ajuda', 'ajuda', 'socorro']
 
-    DEV_FUNCTIONS_ON = auto()
-    DEV_FUNCTIONS_OFF = auto()
-    DEV_COMMANDS = auto()
+    DEV_FUNCTIONS_ON = ['/set_dev_functions_on']
 
-    # origem das informações da última cidade
-    #SOURCE          = auto()
+    DEV_FUNCTIONS_OFF = ['/set_dev_functions_off']
+
+    DEV_COMMANDS = ['/devhelp']
 
 
 class CouldNotUnderstandException(Exception):

@@ -6,20 +6,21 @@ from pyowm import OWM
 from pyowm.weatherapi25.weather import Weather
 
 
-
 class WeatherAPI:
     """Interface de uso da API do OpenWeatherMap"""
     def __init__(self, owm_api_key: str):
         """Precisa de uma chave/token da API"""
         self._owm = OWM(
-            API_key = owm_api_key,
-            config_module = 'vai_chover_bot.weather.configuration'
+            API_key=owm_api_key,
+            config_module='vai_chover_bot.weather.configuration'
             # essa configuração acima muda a linguagem para 'pt' e
             # adiciona um cache simples pra tentar reduzir os requests
         )
 
 
-    def _getWeather(self, coords) -> Weather:
+
+
+    def get_weather(self, coords) -> Weather:
         """
         Retorna um objeto da PyOWM, para uso interno da classe.
         Pode resultar em um NotFoundError da PyOWM também.
@@ -27,27 +28,27 @@ class WeatherAPI:
         observation = self._owm.weather_at_coords(coords['lat'], coords['lng'])
         return observation.get_weather()
 
-    def getWeatherDescription(self, coords) -> str:
-        """Busca a descrição do tempo da cidade"""
-        weather = self._getWeather(coords)
+    def get_weather_description(self, coords, date) -> str:
+        """Busca a descrição do tempo no lugar"""
+        weather = self.get_weather(coords)
         status = weather.get_detailed_status()
         return status.lower()
 
-    def getTemperature(self, coords) -> float:
-        """Temperatura média da cidade"""
-        weather = self._getWeather(coords)
+    def get_temperature(self, coords, date) -> float:
+        """Temperatura média no lugar"""
+        weather = self.get_weather(coords)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp']
 
-    def getTempVariation(self, coords) -> tuple:
-        """Limites de temperatura da cidade"""
-        weather = self._getWeather(coords)
+    def get_temp_variation(self, coords, date) -> tuple:
+        """Limites de temperatura no lugar"""
+        weather = self.get_weather(coords)
         temp = weather.get_temperature(unit='celsius')
         return temp['temp_min'], temp['temp_max']
 
-    def isRainy(self, coords) -> bool:
-        """Teste se está chuvendo na cidade"""
-        weather = self._getWeather(coords)
+    def is_rainy(self, coords, date) -> bool:
+        """Teste se está chovendo no lugar"""
+        weather = self.get_weather(coords)
 
         # se o status diz, então tá chuvendo
         if weather.get_status().lower() == 'rain':
