@@ -1,56 +1,49 @@
 from ..database import UserDAO, User
+from ..database.user_keys import UserStateKeys, UserDataKeys
 
 
 class Handshake:
 
-    def __init__(self):
-        self.subscriptionsState = {} # dicinario que controla o estado do cadastro para cada chat_id (usuario)
-        self.userDicts = [] # vetor para guardar os diversos dicionarios de usuarios que estao sendo criados
+    def __init__(self, bot):
         self.repo = UserDAO()
+        self.bot = None
 
-    def evaluateSubscription(self, currentBot, chat_id, text):
+    def evaluate_subscription(self, chat_id, text):
         chat_id = str(chat_id)
-        if chat_id not in self.subscriptionsState:
-            self.initiateSubscription(chat_id)
-            currentBot.sendMessage(chat_id, 'Qual seu nome?')
+        if not self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING]:
+            self.initiate_subscription(chat_id)
+            self.bot.markdown_message(chat_id, '*Qual seu nome?*')
             return
-        state = self.subscriptionsState[chat_id]
+        state = self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING]
 
-        if state == 'nome':
-            self.cadastrarNome(chat_id, text)
-            currentBot.sendMessage(chat_id, 'Qual seu e-mail?')
+        if state == UserStateKeys.SUBSCRIBING_NAME:
+            self.subscribe_name(chat_id, text)
+            self.bot.markdown_message(chat_id, '*Qual seu e-mail?*')
 
-        elif state == 'email':
-            self.cadastrarEmail(chat_id, text)
-            currentBot.sendMessage(chat_id, 'Qual a sua cidade?')
-            currentBot.update_user_dict(chat_id, subscribing=True)
+        elif state == UserStateKeys.SUBSCRIBING_EMAIL:
+            self.subscribe_email(chat_id, text)
+            self.bot.markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
+            self.bot.update_user_dict(chat_id, subscribing=True)
 
-        elif state == 'cidade':
-            self.cadastrarCidade(chat_id, text)
-            currentBot.sendMessage(chat_id, 'Obrigado por se cadastrar!! Aproveite nossas funcionalidades!!')
+        elif state == UserStateKeys.SUBSCRIBING_PLACE:
+            self.subscribe_place(chat_id, text)
+            self.bot.markdown_message(chat_id, 'Obrigado por se cadastrar!! Aproveite nossas funcionalidades!!')
 
-    def initiateSubscription(self, chat_id):
-        self.subscriptionsState[chat_id] = 'nome'
-        self.userDicts.append({'id': chat_id})
+    def initiate_subscription(self, chat_id):
+        self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING] = UserStateKeys.SUBSCRIBING_NAME
 
-    def checkHandshakeStatus(self, chat_id):
-        return str(chat_id) in self.subscriptionsState
+        self.bot.users_dict[chat_id][UserDataKeys.CHAT_ID] = chat_id
 
-    def cadastrarNome(self, chat_id, name):
-        self.subscriptionsState[chat_id] = 'email'
-        list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['name'] = name
+    def subscribe_name(self, chat_id, name):
+        self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING] = UserStateKeys.SUBSCRIBING_EMAIL
+        self.bot.users_dict[chat_id][UserDataKeys.NAME] = name
 
-    def cadastrarEmail(self, chat_id, email):
-        self.subscriptionsState[chat_id] = 'cidade'
-        list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['email'] = email
+    def subscribe_email(self, chat_id, email):
+        self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING] = UserStateKeys.SUBSCRIBING_PLACE
+        self.bot.users_dict[chat_id][UserDataKeys.EMAIL] = email
 
-
-    def cadastrarCidade(self, chat_id, cidade):
-        del self.subscriptionsState[chat_id]
-        list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['city'] = cidade
-        list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]['inactive_time'] = 'tempo nulo'
-        self.repo.write(User.from_dict(list(filter(lambda i: i['id'] == chat_id, self.userDicts))[0]))
-        ## deletar de self.userDicts
-
-
-
+    def subscribe_place(self, chat_id, place):
+        self.bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING] = None
+        self.bot.users_dict[chat_id][UserDataKeys.PLACE] = place
+        self.repo.write(User.from_dict(self.bot.users_dict[chat_id]))
+        # deletar de self.userDicts

@@ -4,8 +4,8 @@ O parser propriamente
 import enchant
 from .question import WeatherTypes, FunctionalTypes, CouldNotUnderstandException
 import datetime
+from ..database.user_keys import UserStateKeys
 from datetime import timedelta
-from datetime import date as date_type
 from calendar import monthrange
 
 
@@ -122,33 +122,27 @@ def find_hour(word: str):
 
 
 def find_tag_date_pairs(requests: list):
+    assert requests
 
     pairs = []
+    last_was_tag = False
+    tag = None
 
-    i = 0
-    while i < len(requests) - 1:
-        if isinstance(requests[i], WeatherTypes):
-            j = i + 1
-            while j < len(requests):
-                if isinstance(requests[j], date_type):
+    for request in requests:
+        if isinstance(request, WeatherTypes):
+            tag = request
+            last_was_tag = True
 
-                    date_index = j
+        elif isinstance(request, datetime.datetime) and tag:
+            date = request
+            pairs.append([tag, date])
+            last_was_tag = False
 
-                    _date = requests[j]
-                    j += 1
-                    while j < len(requests) and requests[j] == []:
-                        j += 1
+        elif isinstance(request, int) and not last_was_tag:
+            pairs[-1][1] = pairs[-1][1].replace(hour=request)
 
-                    if not j == len(requests) and isinstance(requests[j], int):
-                        _date = requests[date_index].replace(hour=requests[j])
-
-                    pairs.append((requests[i], _date))
-                else:
-                    break
-        i += 1
-
-    if isinstance(requests[len(requests) - 1], WeatherTypes):
-        pairs.append((requests[i], datetime.datetime.now()))
+    if isinstance(requests[-1], WeatherTypes):
+        pairs.append((requests[-1], datetime.datetime.now()))
 
     return pairs
 
@@ -165,9 +159,12 @@ def parse(bot, chat_id, text: str) -> tuple:
         if any(word in functional_type.value for word in words):
             return functional_type, None
 
+    if bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING]:
+        return FunctionalTypes.SET_SUBSCRIPTION, None
+
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
 
-    if ('em' not in words and not bot.users_dict[chat_id][UserKeys.SUBSCRIBED_PLACE]) or \
+    if ('em' not in words and not bot.users_dict[chat_id][UserStateKeys.SUBSCRIBED_PLACE]) or \
             words.index('em') == len(words) - 1:
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
@@ -213,11 +210,3 @@ class MoreThanFiveDaysException(Exception):
         if source_text:
             self.source_text = source_text
 
-
-class UserKeys:
-    SETTING_NOTIFICATION_LOCATION = 'SETTING_NOTIFICATION_LOCATION'
-    SUBSCRIBING = 'SUBSCRIBING'
-    FORECAST = 'FORECAST'
-    MSG_TIME_DELTA = 'MSG_TIME_DELTA'
-    NOTF_COORDS = 'NOTF_COORDS'
-    SUBSCRIBED_PLACE = 'SUBSCRIBED_PLACE'
