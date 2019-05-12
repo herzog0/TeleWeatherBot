@@ -11,16 +11,16 @@ class UserDAO(object):
         cred = credentials.Certificate(os.environ['HOME'] + "/vai_chover_bot/vai_chover_bot/database/vai-chover-bot-"
                                                             "firebase-adminsdk-jqxyn-df2b6d5553.json")
         firebase_admin.initialize_app(cred)
-    
+
     def write(self, user):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(user.id).set(user.to_dict())
+        doc_ref = db.collection(u'users').document(user.chat_id).set(user.to_dict())
         return doc_ref
 
     def read(self, id):
         db = firestore.client()
         doc_ref = db.collection(u'users').document(id)
-        return User.from_dict(doc_ref.get().to_dict())
+        return doc_ref.get().to_dict()
     
     def update(self, user):
         db = firestore.client()

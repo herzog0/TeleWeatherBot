@@ -8,6 +8,10 @@ from ..database.user_keys import UserStateKeys
 from datetime import timedelta
 from calendar import monthrange
 
+week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
+             'amanha',
+             'haja', 'hoje', 'agora']
+
 
 def address(bot, place_name):
 
@@ -23,63 +27,46 @@ def list_of_suggestions(word: str):
     return d.suggest(word)
 
 
+def less_than_five_days(value, m=False, w=False):
+    now = datetime.datetime.now()
+    days_left = 0
+    today = 0
+
+    if w:
+        today = now.weekday()
+        days_left = 7 - now.weekday()
+
+    elif m:
+        today = now.day
+        days_left = monthrange(now.year, now.month)[1] - now.day
+
+        # se não for maior igual a um, tá errado se for maior que o range desse mês, significa que se refere ao
+        # fim do mês seguinte e portanto, é maior que 5 dias.
+
+        if not 1 <= value <= monthrange(now.year, now.month)[1]:
+            raise MoreThanFiveDaysException(
+                f"*O dia {value} não existe ou está muito distante*\n"
+                f"Escolha uma data no máximo 5 dias à frente")
+
+    if 0 <= value - today <= 5:
+        delta_days = value - today
+    elif 0 <= days_left + value <= 5:
+        delta_days = days_left + value
+    else:
+        raise MoreThanFiveDaysException(f"*{week_days[value].capitalize() if w else f'Dia {value}'} está muito* "
+                                        f"*distante*\n"
+                                        f"Escolha uma data no máximo 5 dias à frente")
+
+    if not delta_days and not delta_days == 0:
+        raise MoreThanFiveDaysException(f"*{value} nao faz o menor sentido.*")
+
+    return now + timedelta(delta_days)
+
+
 def find_date(word: str):
     """
     Retorna a data correspondente à palavra inserida
     """
-
-    week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
-                 'amanha',
-                 'haja', 'hoje', 'agora']
-
-    # 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-
-    def less_than_five_days(value, m=False, w=False):
-
-        if w:
-            now = datetime.datetime.now()
-            wk_days_left = 7 - now.weekday()
-
-            if 0 <= value - now.weekday() <= 5:
-                delta_days = value - now.weekday()
-            elif 0 <= wk_days_left + value <= 5:
-                delta_days = wk_days_left + value
-            else:
-                raise MoreThanFiveDaysException(f"*{week_days[value].capitalize()} está muito distante*\n"
-                                                f"Escolha uma data no máximo 5 dias à frente")
-
-            if not delta_days and not delta_days == 0:
-                raise MoreThanFiveDaysException(f"*{value} nao faz o menor sentido.*")
-
-            return now + timedelta(delta_days)
-
-        elif m:
-            now = datetime.datetime.now()
-
-            # se não for maior igual a um, tá errado se for maior que o range desse mês, significa que se refere ao
-            # fim do mês seguinte e portanto, é maior que 5 dias.
-
-            if not 1 <= value <= monthrange(now.year, now.month)[1]:
-                raise MoreThanFiveDaysException(
-                    f"*O dia {value} não existe ou está muito distante*\n"
-                    f"Escolha uma data no máximo 5 dias à frente")
-
-            mth_days_left = monthrange(now.year, now.month)[1] - now.day
-
-            # se a data estiver muito à frente
-
-            if 0 <= value - now.day <= 5:
-                delta_days = value - now.day
-            elif 0 <= mth_days_left + value <= 5:
-                delta_days = mth_days_left + value
-            else:
-                raise MoreThanFiveDaysException(f"*Dia {value}) está muito distante*\n"
-                                                f"Escolha uma data no máximo 5 dias à frente")
-
-            if not delta_days and not delta_days == 0:
-                raise MoreThanFiveDaysException(f"*Dia {value} mês) nao faz o menor sentido")
-
-            return now + timedelta(delta_days)
 
     word = word.lower().strip()
     try:
@@ -159,12 +146,12 @@ def parse(bot, chat_id, text: str) -> tuple:
         if any(word in functional_type.value for word in words):
             return functional_type, None
 
-    if bot.users_dict[chat_id][UserStateKeys.SUBSCRIBING]:
-        return FunctionalTypes.SET_SUBSCRIPTION, None
+    if bot.users[str(chat_id)].state():
+        return bot.users[str(chat_id)].state(), None
 
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
 
-    if ('em' not in words and not bot.users_dict[chat_id][UserStateKeys.SUBSCRIBED_PLACE]) or \
+    if ('em' not in words and not bot.users[chat_id].state() is UserStateKeys.SUBSCRIBED_PLACE) or \
             words.index('em') == len(words) - 1:
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
