@@ -15,7 +15,6 @@ class UserStateKeys(Enum):
     ALREDY_SUBSCRIBED = 'ALREDY_SUBSCRIBED'
 
 
-
 @unique
 class UserDataKeys(Enum):
 
@@ -30,13 +29,3 @@ class UserDataKeys(Enum):
     LAST_UPDATE = 'LAST_UPDATE'
 
     NOTIFICATION_COORDS = 'NOTF_COORDS'
-
-
-
-
-
-
-
-
-
-

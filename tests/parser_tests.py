@@ -1,4 +1,4 @@
-from vai_chover_bot import parser
+from tele_weather_bot import parser
 import unittest
 import re
 

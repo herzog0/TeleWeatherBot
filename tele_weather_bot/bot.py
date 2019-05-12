@@ -21,17 +21,22 @@ from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 from datetime import datetime, timedelta
-import vai_chover_bot.dev_functions as devfunc
+import tele_weather_bot.dev_functions as devfunc
 
 
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
 
-    def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token: str, password=""):
+    def __init__(self,
+                 telegram_token: str,
+                 open_weather_token: str,
+                 google_maps_token: str,
+                 firebase_certificate: dict,
+                 password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self.owm_api = WeatherAPI(open_weather_token)
         self.gmaps = GoogleGeoCode(google_maps_token)
-        self.repo = UserDAO()
+        self.repo = UserDAO(firebase_certificate)
 
         if password == "":
             self.password = False
@@ -70,7 +75,6 @@ class WeatherBot(telepot.Bot):
         response = None
 
         try:
-            # todo incluir caso subscribing
             qtype, location = parser.parse(self, chat_id, text)
 
             if not location:

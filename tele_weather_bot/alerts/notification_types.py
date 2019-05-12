@@ -1,6 +1,7 @@
 from enum import Enum, auto, unique
 
 
+@unique
 class NotificationTypes(Enum):
     """
     Classe enum que contém os tipos de notificações para a inscrição de um usuário
