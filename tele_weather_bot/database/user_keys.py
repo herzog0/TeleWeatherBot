@@ -1,0 +1,31 @@
+from enum import Enum, unique
+
+
+@unique
+class UserStateKeys(Enum):
+
+    SUBSCRIBING_ALERT = 'SUBSCRIBING_ALERT'
+
+    SUBSCRIBING_NAME = 'SUBSCRIBING_NAME'
+
+    SUBSCRIBING_EMAIL = 'SUBSCRIBING_EMAIL'
+
+    SUBSCRIBING_PLACE = 'SUBSCRIBING_PLACE'
+
+    ALREDY_SUBSCRIBED = 'ALREDY_SUBSCRIBED'
+
+
+@unique
+class UserDataKeys(Enum):
+
+    CHAT_ID = 'CHAT_ID'
+
+    NAME = 'NAME'
+
+    EMAIL = 'EMAIL'
+
+    PLACE = 'PLACE'
+
+    LAST_UPDATE = 'LAST_UPDATE'
+
+    NOTIFICATION_COORDS = 'NOTF_COORDS'

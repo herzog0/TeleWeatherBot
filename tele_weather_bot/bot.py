@@ -4,9 +4,12 @@ O bot propriamente
 
 from .weather import WeatherAPI, NotFoundError
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
-from .handshake import Handshake
 from .alerts.notification import Notification
 from .google_maps.geocode_functions import GoogleGeoCode, LocationNotFoundException
+from .database.user_keys import UserStateKeys, UserDataKeys
+from .database.user import User
+from .database.userDAO import UserDAO
+from .parser.parser import address
 from datetime import date as date_type
 
 from pyowm import OWM
@@ -19,62 +22,45 @@ from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 from datetime import datetime, timedelta
-import vai_chover_bot.dev_functions as devfunc
+import tele_weather_bot.dev_functions as devfunc
 
 
 class WeatherBot(telepot.Bot):
     """Bot de previsão do tempo"""
 
-    def __init__(self, telegram_token: str, open_weather_token: str, google_maps_token: str, password=""):
+    def __init__(self,
+                 telegram_token: str,
+                 open_weather_token: str,
+                 google_maps_token: str,
+                 firebase_certificate: dict,
+                 password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self.owm_api = WeatherAPI(open_weather_token)
         self.gmaps = GoogleGeoCode(google_maps_token)
+        self.repo = UserDAO(firebase_certificate)
 
-        self.handshakeHandler = Handshake()
-        self.subscriptionsState = {}
         if password == "":
             self.password = False
         else:
             self.password = password
 
-        self.delta_counter = datetime.now()
-
-        # Dicionário contendo os dicionários de cada usuário
-        self.user_state_flags = {UserKeys.SETTING_NOTIFICATION_LOCATION: False, UserKeys.FORECAST: False,
-                                 UserKeys.SUBSCRIBING: False, UserKeys.SUBSCRIBED_PLACE: False,
-                                 UserKeys.MSG_TIME_DELTA: ""}
-        
-        self.users_dict = {}
+        self.users = {}        
 
         self.dev_dict = {}
 
         super().__init__(telegram_token)
 
-    def update_user_dict(self, chat_id, setting_notification_location=False, forecast=False, subscribing=False,
-                         only_delta_time_update=False):
-        if chat_id not in self.users_dict:
-            self.users_dict[chat_id] = self.user_state_flags
-            self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA] = datetime.now()
-
-        if not only_delta_time_update:
-            self.users_dict[chat_id][UserKeys.SETTING_NOTIFICATION_LOCATION] = setting_notification_location
-            self.users_dict[chat_id][UserKeys.FORECAST] = forecast
-            self.users_dict[chat_id][UserKeys.SUBSCRIBING] = subscribing
-        self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA] = \
-            datetime.now() - self.users_dict[chat_id][UserKeys.MSG_TIME_DELTA]
-
     def update_database(self):
         pass
-
-    def get_user_state(self, chat_id, key):
-        assert type(self.users_dict[chat_id][key]) is bool
-        return self.users_dict[chat_id][key]
 
     def on_chat_message(self, msg):
 
         content_type, _, chat_id = telepot.glance(msg)
 
-        self.update_user_dict(chat_id, only_delta_time_update=True)
+        if chat_id not in self.users:
+            self.users[chat_id] = User(chat_id)
+        else:
+            self.users[chat_id].update_user()
 
         # If the message is a text message
         if content_type == 'text':
@@ -113,10 +99,9 @@ class WeatherBot(telepot.Bot):
                     else:
                         self.markdown_message(chat_id, "*Modo developer não configurado*")
 
-                elif qtype is FunctionalTypes.SET_SUBSCRIPTION \
-                        or self.handshakeHandler.checkHandshakeStatus(chat_id):
+                elif qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
                     #
-                    self.handshakeHandler.evaluateSubscription(self, chat_id, text)
+                    self.evaluate_subscription(chat_id, text)
 
                 elif qtype is FunctionalTypes.INITIAL_MESSAGE:
                     self.start(chat_id)
@@ -147,7 +132,7 @@ class WeatherBot(telepot.Bot):
                         temp = self.owm_api.get_temperature(coords, tag_date)
 
                         response = f'{self.date_string(tag_date)}' \
-                            f'{weather.capitalize()}' \
+                            f'{weather.capitalize()}\n' \
                             f'Temperatura atual: {temp:.1f}°C' \
 
                     elif tag is WeatherTypes.TEMPERATURE:
@@ -176,19 +161,6 @@ class WeatherBot(telepot.Bot):
 
                     if response:
                         self.markdown_message(chat_id, response)
-            #
-            #
-            # elif qtype is QuestionType.TEMPERATURE:
-            #     response = f'Lá parece estar {temp:.1f}°C '
-            #
-            # elif qtype is QuestionType.TEMP_VARIATION:
-            #
-            #
-            #
-            # if response:
-            #     self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
-            #     self.markdown_message(chat_id, full_adress)
-            #     self.simple_message(chat_id, response)
 
         except MoreThanFiveDaysException as e:
             self.markdown_message(chat_id, f'{str(e)}')
@@ -208,12 +180,11 @@ class WeatherBot(telepot.Bot):
         chat_id, message_id = self.get_message_id(msg)
         coords = {'lat': msg['location']['latitude'], 'lng': msg['location']['longitude']}
 
-        if self.get_user_state(chat_id, key=UserKeys.SETTING_NOTIFICATION_LOCATION):
-            self.users_dict[chat_id][UserKeys.NOTF_COORDS] = coords
+        if self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
+            self.evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-            pass
-
-        elif self.get_user_state(chat_id, key=UserKeys.SUBSCRIBING):
+        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_ALERT:
+            
             pass
 
         else:
@@ -242,21 +213,21 @@ class WeatherBot(telepot.Bot):
             elif info[1] == 'set':
 
                 if info[2] == 'location':
-                    self.update_user_dict(message_id[0], setting_notification_location=True)
+                    self.users[message_id[0]].update_user(subscribing_alert=True)
                     values = [3]
 
                 elif info[2] == 'place_name':
-                    self.update_user_dict(message_id[0], setting_notification_location=True)
+                    self.users[message_id[0]].update_user(subscribing_alert=True)
                     values = [4]
 
                 elif info[2] == 'go_back':
-                    self.update_user_dict(message_id[0])
+                    # todo self.update_user(message_id[0])
                     values = [5]
 
             elif info[1] == 'get':
 
                 if info[2] == 'cancel':
-                    self.update_user_dict(message_id[0])
+                    # todo self.update_user(message_id[0])
                     if info[3] == 'by_location':
                         values = [1]
                     elif info[3] == 'by_place_name':
@@ -274,8 +245,8 @@ class WeatherBot(telepot.Bot):
                 eval(options.get(str(value), "None"))
 
     @staticmethod
-    def date_string(date: date_type, time_set: datetime.hour = None, hour_set=False):
-        if hour_set:
+    def date_string(date: date_type, time_set: datetime.hour = None):
+        if time_set:
             return str(f'{date.day}/{date.month}/{date.year} às {time_set}'
                        f'\n*----------------------*\n')
         else:
@@ -354,7 +325,44 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             [InlineKeyboardButton(text='Exibir comandos disponíveis', callback_data='comandos')]
         ])
         self.simple_message(chat_id, initial_response_text, reply_markup=keyboard)
+    
+    def evaluate_subscription(self, chat_id, text):
+        chat_id = chat_id
+        if not self.users[chat_id].state():
+            self.users[chat_id].update_user(subscribing_name=True)
+            self.markdown_message(chat_id, '*Qual seu nome?*')
 
+        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_NAME:
+            self.users[chat_id].update_user(name=text, subscribing_email=True)
+            self.markdown_message(chat_id, '*Qual seu e-mail?*')
+
+        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_EMAIL:
+            self.users[chat_id].update_user(email=text, subscribing_place=True)
+            self.markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
+
+        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
+            adress, coords = None, None
+            try:
+                adress, coords = self.gmaps.get_user_address_by_name(text)
+            except LocationNotFoundException as e:
+                self.markdown_message(chat_id, f'*{str(e)}*')
+            self.users[chat_id].update_user(place={'adress': adress, 'coords': coords}, subscribed=True)
+            self.users[chat_id].subscribed = True
+            self.repo.write(self.users[chat_id])
+            self.markdown_message(chat_id, f"""
+*Parabéns!*
+*Agora você possui funcionalidade especiais.*
+
+Você inseriu as informações:
+*Nome*: {self.users[chat_id].name}
+*Email*: {self.users[chat_id].email}
+*Localização*: {self.users[chat_id].place['adress'] or 'Local não informado'}
+
+Caso queira alterar os dados basta recomeçar o cadastro.
+Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.
+
+""")
+    
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
 
@@ -388,12 +396,3 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 
     def delete_message(self, message_id):
         return self.deleteMessage(message_id)
-
-
-class UserKeys:
-    SETTING_NOTIFICATION_LOCATION = 'SETTING_NOTIFICATION_LOCATION'
-    SUBSCRIBING = 'SUBSCRIBING'
-    FORECAST = 'FORECAST'
-    MSG_TIME_DELTA = 'MSG_TIME_DELTA'
-    NOTF_COORDS = 'NOTF_COORDS'
-    SUBSCRIBED_PLACE = 'SUBSCRIBED_PLACE'

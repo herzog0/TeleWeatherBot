@@ -17,14 +17,14 @@ class Author:
         return f'Author({repr(self.name)}, {repr(self.email)})'
 
 
-name = "vai_chover_bot"
+name = "tele_weather_bot"
 project = "WeatherBot"
 
 version = "0.1"
 release = "0.1.5"
 
 description = "Bot para o Telegram com funcionalidades especiais relacionadas ao clima local dx usuárix."
-url = "https://gitlab.com/teobmendes/vai_chover_bot"
+url = "https://gitlab.com/teobmendes/tele_weather_bot"
 
 authors = [
     Author("João Hergert", "joaohergert@gmail.com"),

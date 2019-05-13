@@ -47,13 +47,17 @@ deactivate
 
 ### Rodando
 
-Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api). Essa variáveis serão recuperadas de um arquivo que deve se chamar "TOKENS_HERE" e estar contido na pasta raiz do projeto, o formato dos tokens escritos no arquivo deve seguir o formato:
+Para rodar são necessários os tokens de acesso ao [Telegram](https://core.telegram.org/bots) e ao [OpenWeatherMap](https://openweathermap.org/api).   
+Essas variáveis serão recuperadas de um arquivo que deve se chamar "TOKENS_HERE.py" e estar contido na pasta raiz do projeto.  
+As variáveis contidas no arquivo devem ter estes mesmos nomes:
 
 ```
-TELEGRAM_TOKEN=123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456
-OWM_TOKEN=0123456789abcdefghijklmnopqrstuvwxy
-GOOGLEMAPSTOKEN=0123456789abcdefghijklmnopqrstuvwxyz123
-PASSWORD=<opcional>
+TELEGRAM_TOKEN = "123456789:abcdef_GHIJKLMNOPQ-rstuvwxyz0123456"
+OWM_TOKEN = "0123456789abcdefghijklmnopqrstuvwxy"
+GOOGLEMAPS_TOKEN = "0123456789abcdefghijklmnopqrstuvwxyz123"
+PASSWORD = "<opcional>"
+
+FIREBASE_CERTIFICATE = {<dicionário que contém os dados do certificado do firebase>}
 ```
 
 E, só então, considerando o ambiente virtual ativado na sessão "configuração do ambiente", podemos rodar o bot com:

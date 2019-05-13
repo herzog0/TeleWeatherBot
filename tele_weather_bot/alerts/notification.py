@@ -77,7 +77,6 @@ Nos diga uma localização sobre a qual você deseja receber notícias escolhend
     def set_notification_by_trigger(bot_instance, message_id):
         pass
 
-
     @staticmethod
     def set_daily_notification_hour():
         msg_edit = """"""

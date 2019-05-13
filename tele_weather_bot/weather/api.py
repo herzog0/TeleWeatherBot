@@ -13,7 +13,7 @@ class WeatherAPI:
         """Precisa de uma chave/token da API"""
         self._owm = OWM(
             API_key=owm_api_key,
-            config_module='vai_chover_bot.weather.configuration'
+            config_module='tele_weather_bot.weather.configuration'
             # essa configuração acima muda a linguagem para 'pt' e
             # adiciona um cache simples pra tentar reduzir os requests
         )
