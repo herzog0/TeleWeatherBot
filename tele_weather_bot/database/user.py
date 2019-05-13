@@ -40,7 +40,7 @@ class User(object):
             self.chat_id: {
                 u'name': self.name,
                 u'email': self.email,
-                u'place': self.place,
+                u'place': self.place['coords'],
                 u'last_update_time': self.last_update_time,
                 u'notification_coords': self.notification_coords,
                 u'state': user_state,

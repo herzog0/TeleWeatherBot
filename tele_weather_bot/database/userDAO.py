@@ -1,9 +1,6 @@
 import firebase_admin
-import os
 from firebase_admin import credentials
 from firebase_admin import firestore
-
-from .user import User
 
 
 class UserDAO(object):
@@ -11,22 +8,29 @@ class UserDAO(object):
         cred = credentials.Certificate(firebase_certificate)
         firebase_admin.initialize_app(cred)
 
-    def write(self, user):
+    @staticmethod
+    def write(user):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(user.chat_id).set(user.to_dict())
+        chat_id = str(user.chat_id)
+        doc_ref = db.collection(u'users').document(chat_id).set(user.to_dict())
         return doc_ref
 
-    def read(self, id):
+    @staticmethod
+    def read(chat_id):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(id)
+        chat_id = str(chat_id)
+        doc_ref = db.collection(u'users').document(chat_id)
         return doc_ref.get().to_dict()
-    
-    def update(self, user):
+
+    @staticmethod
+    def update(user):
         db = firestore.client()
-        doc_ref = db.collection(u'users').document(user.id)
+        chat_id = str(user.chat_id)
+        doc_ref = db.collection(u'users').document(chat_id)
         doc_ref.update(user.to_dict())
 
-    def delete(self, id):
+    @staticmethod
+    def delete(chat_id):
         db = firestore.client()
-        db.collection(u'users').document(id).delete()
-
+        chat_id = str(chat_id)
+        db.collection(u'users').document(chat_id).delete()

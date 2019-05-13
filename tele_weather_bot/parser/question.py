@@ -2,7 +2,7 @@
 Definição dos possíveis tipos de questões e o erro associado
 """
 
-from enum import Enum, auto, unique
+from enum import Enum, unique
 
 
 @unique
@@ -52,11 +52,3 @@ class FunctionalTypes(Enum):
     DEV_FUNCTIONS_OFF = ['/set_dev_functions_off']
 
     DEV_COMMANDS = ['/devhelp']
-
-
-class CouldNotUnderstandException(Exception):
-    """Exceção de não compreender a questão ou o tipo dela"""
-    def __init__(self, source_text: str = None):
-        """Pode conter o texto que não foi compreendido"""
-        if source_text:
-            self.source_text = source_text

@@ -2,7 +2,7 @@
 O parser propriamente
 """
 import enchant
-from .question import WeatherTypes, FunctionalTypes, CouldNotUnderstandException
+from .question import WeatherTypes, FunctionalTypes
 import datetime
 from ..database.user_keys import UserStateKeys
 from datetime import timedelta
@@ -142,17 +142,17 @@ def parse(bot, chat_id, text: str) -> tuple:
 
     words = text.lower().strip().split()
 
+    # Se inseriu comando funcional
     for functional_type in FunctionalTypes:
         if any(word in functional_type.value for word in words):
             return functional_type, None
 
-    if bot.users[str(chat_id)].state():
-        return bot.users[str(chat_id)].state(), None
+    # Se está no meio de algum processo de inscrição
+    if bot.users[chat_id].state():
+        return bot.users[chat_id].state(), None
 
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
-
-    if ('em' not in words and not bot.users[chat_id].state() is UserStateKeys.SUBSCRIBED_PLACE) or \
-            words.index('em') == len(words) - 1:
+    if ('em' not in words and not bot.users[chat_id].place) or words.index('em') == len(words) - 1:
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
                                           " do lugar ao final da frase (e apenas um lugar), antecedido pela palavra "
@@ -197,3 +197,10 @@ class MoreThanFiveDaysException(Exception):
         if source_text:
             self.source_text = source_text
 
+
+class CouldNotUnderstandException(Exception):
+    """Exceção de não compreender a questão ou o tipo dela"""
+    def __init__(self, source_text: str = None):
+        """Pode conter o texto que não foi compreendido"""
+        if source_text:
+            self.source_text = source_text

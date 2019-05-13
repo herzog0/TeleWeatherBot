@@ -9,6 +9,7 @@ from .google_maps.geocode_functions import GoogleGeoCode, LocationNotFoundExcept
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.user import User
 from .database.userDAO import UserDAO
+from .parser.parser import address
 from datetime import date as date_type
 
 from pyowm import OWM
@@ -52,15 +53,14 @@ class WeatherBot(telepot.Bot):
     def update_database(self):
         pass
 
-    def get_user_state(self, chat_id, key):
-        pass
-
     def on_chat_message(self, msg):
 
         content_type, _, chat_id = telepot.glance(msg)
 
-        if str(chat_id) not in self.users:
-            self.users[str(chat_id)] = User(chat_id)
+        if chat_id not in self.users:
+            self.users[chat_id] = User(chat_id)
+        else:
+            self.users[chat_id].update_user()
 
         # If the message is a text message
         if content_type == 'text':
@@ -132,7 +132,7 @@ class WeatherBot(telepot.Bot):
                         temp = self.owm_api.get_temperature(coords, tag_date)
 
                         response = f'{self.date_string(tag_date)}' \
-                            f'{weather.capitalize()}' \
+                            f'{weather.capitalize()}\n' \
                             f'Temperatura atual: {temp:.1f}°C' \
 
                     elif tag is WeatherTypes.TEMPERATURE:
@@ -180,12 +180,11 @@ class WeatherBot(telepot.Bot):
         chat_id, message_id = self.get_message_id(msg)
         coords = {'lat': msg['location']['latitude'], 'lng': msg['location']['longitude']}
 
-        if self.get_user_state(chat_id, key=UserStateKeys.SETTING_NOTIFICATION_LOCATION):
-            self.users[chat_id][UserDataKeys.NOTIFICATION_COORDS] = coords
+        if self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
+            self.evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-            pass
-
-        elif self.get_user_state(chat_id, key=UserStateKeys.SUBSCRIBING):
+        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_ALERT:
+            
             pass
 
         else:
@@ -246,8 +245,8 @@ class WeatherBot(telepot.Bot):
                 eval(options.get(str(value), "None"))
 
     @staticmethod
-    def date_string(date: date_type, time_set: datetime.hour = None, hour_set=False):
-        if hour_set:
+    def date_string(date: date_type, time_set: datetime.hour = None):
+        if time_set:
             return str(f'{date.day}/{date.month}/{date.year} às {time_set}'
                        f'\n*----------------------*\n')
         else:
@@ -328,7 +327,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
         self.simple_message(chat_id, initial_response_text, reply_markup=keyboard)
     
     def evaluate_subscription(self, chat_id, text):
-        chat_id = str(chat_id)
+        chat_id = chat_id
         if not self.users[chat_id].state():
             self.users[chat_id].update_user(subscribing_name=True)
             self.markdown_message(chat_id, '*Qual seu nome?*')
@@ -342,7 +341,12 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             self.markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
 
         elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
-            self.users[chat_id].update_user(place=text, subscribed=True)
+            adress, coords = None, None
+            try:
+                adress, coords = self.gmaps.get_user_address_by_name(text)
+            except LocationNotFoundException as e:
+                self.markdown_message(chat_id, f'*{str(e)}*')
+            self.users[chat_id].update_user(place={'adress': adress, 'coords': coords}, subscribed=True)
             self.users[chat_id].subscribed = True
             self.repo.write(self.users[chat_id])
             self.markdown_message(chat_id, f"""
@@ -350,9 +354,9 @@ ou   *help previsao* (o mesmo que "ajuda 1")
 *Agora você possui funcionalidade especiais.*
 
 Você inseriu as informações:
-Nome: {self.users[chat_id].name}
-Email: {self.users[chat_id].email}
-Localização: {self.users[chat_id].place}
+*Nome*: {self.users[chat_id].name}
+*Email*: {self.users[chat_id].email}
+*Localização*: {self.users[chat_id].place['adress'] or 'Local não informado'}
 
 Caso queira alterar os dados basta recomeçar o cadastro.
 Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.

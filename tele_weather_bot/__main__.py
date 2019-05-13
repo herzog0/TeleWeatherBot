@@ -21,3 +21,7 @@ def main():
 
     except NameError as e:
         print(str(e))
+    except AttributeError as e:
+        print(str(e))
+    except ImportError as e:
+        print(str(e))
