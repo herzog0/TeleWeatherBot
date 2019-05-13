@@ -6,22 +6,17 @@ from .weather import WeatherAPI, NotFoundError
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import Notification
 from .google_maps.geocode_functions import GoogleGeoCode, LocationNotFoundException
-from .database.user_keys import UserStateKeys, UserDataKeys
-from .database.user import User
+from .database.user_keys import UserStateKeys
+from .database.user import User, read_users, write_user
 from .database.userDAO import UserDAO
-from .parser.parser import address
 from datetime import date as date_type
 
-from pyowm import OWM
-from pyowm.utils import geo
-from pyowm.alertapi30.enums import WeatherParametersEnum, OperatorsEnum, AlertChannelsEnum
-from pyowm.alertapi30.condition import Condition
 
 import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import tele_weather_bot.dev_functions as devfunc
 
 
@@ -44,7 +39,7 @@ class WeatherBot(telepot.Bot):
         else:
             self.password = password
 
-        self.users = {}        
+        self.users = None
 
         self.dev_dict = {}
 
@@ -57,8 +52,11 @@ class WeatherBot(telepot.Bot):
 
         content_type, _, chat_id = telepot.glance(msg)
 
+        self.users = read_users()
+
         if chat_id not in self.users:
             self.users[chat_id] = User(chat_id)
+            self.users[chat_id].update_user()
         else:
             self.users[chat_id].update_user()
 
@@ -329,15 +327,15 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     def evaluate_subscription(self, chat_id, text):
         chat_id = chat_id
         if not self.users[chat_id].state():
-            self.users[chat_id].update_user(subscribing_name=True)
+            self.users[chat_id].update_user(user_state=UserStateKeys.SUBSCRIBING_NAME)
             self.markdown_message(chat_id, '*Qual seu nome?*')
 
         elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_NAME:
-            self.users[chat_id].update_user(name=text, subscribing_email=True)
+            self.users[chat_id].update_user(name=text, user_state=UserStateKeys.SUBSCRIBING_EMAIL)
             self.markdown_message(chat_id, '*Qual seu e-mail?*')
 
         elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_EMAIL:
-            self.users[chat_id].update_user(email=text, subscribing_place=True)
+            self.users[chat_id].update_user(email=text, user_state=UserStateKeys.SUBSCRIBING_PLACE)
             self.markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
 
         elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
@@ -346,17 +344,16 @@ ou   *help previsao* (o mesmo que "ajuda 1")
                 adress, coords = self.gmaps.get_user_address_by_name(text)
             except LocationNotFoundException as e:
                 self.markdown_message(chat_id, f'*{str(e)}*')
-            self.users[chat_id].update_user(place={'adress': adress, 'coords': coords}, subscribed=True)
-            self.users[chat_id].subscribed = True
+            self.users[chat_id].update_user(place={'adress': adress, 'coords': coords}, clear_state=True)
             self.repo.write(self.users[chat_id])
             self.markdown_message(chat_id, f"""
 *Parabéns!*
 *Agora você possui funcionalidade especiais.*
 
 Você inseriu as informações:
-*Nome*: {self.users[chat_id].name}
-*Email*: {self.users[chat_id].email}
-*Localização*: {self.users[chat_id].place['adress'] or 'Local não informado'}
+*Nome*: {self.users[chat_id].name()}
+*Email*: {self.users[chat_id].email()}
+*Localização*: {self.users[chat_id].place()['adress'] or 'Local não informado'}
 
 Caso queira alterar os dados basta recomeçar o cadastro.
 Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.

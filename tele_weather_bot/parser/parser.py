@@ -4,7 +4,6 @@ O parser propriamente
 import enchant
 from .question import WeatherTypes, FunctionalTypes
 import datetime
-from ..database.user_keys import UserStateKeys
 from datetime import timedelta
 from calendar import monthrange
 
@@ -152,14 +151,13 @@ def parse(bot, chat_id, text: str) -> tuple:
         return bot.users[chat_id].state(), None
 
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
-    if ('em' not in words and not bot.users[chat_id].place) or words.index('em') == len(words) - 1:
+    if ('em' not in words and not bot.users[chat_id].place()) or ('em' in words and words.index('em') == words[-1]):
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
                                           " do lugar ao final da frase (e apenas um lugar), antecedido pela palavra "
                                           "*em*.\n *ex.*: previsao dia 14 e quarta feira em shopping dom pedro. \n"
                                           "Para mais informações, digite '*ajuda pesquisa*'")
     else:
-        location = None
         if 'em' in words:
             place_name = words[words.index('em') + 1:]
             place_name = " ".join(place_name)
@@ -169,8 +167,9 @@ def parse(bot, chat_id, text: str) -> tuple:
                                                   "inserir outro nome após a palavra-chave *em*.")
             sentence = words[:words.index('em')]
         else:
-
-            # todo location = bot.get_user_data(chat_id, location=True)
+            coords = bot.users[chat_id].place()['coords']
+            coords_f = f'{coords["lat"]} {coords["lng"]}'
+            location = address(bot, coords_f)
             sentence = words
 
         request = []

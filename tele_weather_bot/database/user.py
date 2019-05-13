@@ -1,6 +1,6 @@
 from datetime import datetime
-
 from ..database.user_keys import UserStateKeys
+import json
 
 
 class User(object):
@@ -12,53 +12,59 @@ class User(object):
                  chat_id,
                  name=None,
                  email=None,
-                 place=None,
-                 last_update_time=None,
                  notification_coords=None,
-                 subscribing_alert=None,
-                 subscribing_name=None,
-                 subscribing_email=None,
-                 subscribing_place=None,
-                 subscribed=None):
 
-        self.chat_id = str(chat_id)
-        self.name = name
-        self.email = email
-        self.place = place
-        self.last_update_time = last_update_time
-        self.notification_coords = notification_coords
-        self.subscribed = subscribed
-        self.subscribing_alert = subscribing_alert
-        self.subscribing_name = subscribing_name
-        self.subscribing_email = subscribing_email
-        self.subscribing_place = subscribing_place
+                 user_state: UserStateKeys = None
+                 ):
+
+        self.__chat_id = str(chat_id)
+        self.__name = name
+        self.__email = email
+        self.__place = {'adress': None, 'coords': None}
+        self.__notification_coords = notification_coords
+
+        self.__user_state = user_state
+
+        self.__last_update_time = datetime.now()
+
+    def user_id(self):
+        return self.__chat_id
+
+    def name(self):
+        return self.__name
+
+    def email(self):
+        return self.__email
+
+    def place(self):
+        return self.__place
+
+    def notf_coords(self):
+        return self.__notification_coords
+
+    def last_update(self):
+        return self.__last_update_time
+
+    def state(self):
+        return self.__user_state
 
     def to_dict(self):
-        user_state = self.state()
+        if self.state():
+            user_state = str(self.state().name)
+        else:
+            user_state = None
 
         dest = {
-            self.chat_id: {
-                u'name': self.name,
-                u'email': self.email,
-                u'place': self.place['coords'],
-                u'last_update_time': self.last_update_time,
-                u'notification_coords': self.notification_coords,
+            self.__chat_id: {
+                u'name': self.__name,
+                u'email': self.__email,
+                u'place': self.__place,
+                u'last_update_time': self.__last_update_time,
+                u'notification_coords': self.__notification_coords,
                 u'state': user_state,
             }
         }
         return dest
-
-    def state(self):
-        state = None
-        if self.subscribing_name:
-            state = UserStateKeys.SUBSCRIBING_NAME
-        elif self.subscribing_email:
-            state = UserStateKeys.SUBSCRIBING_EMAIL
-        elif self.subscribing_place:
-            state = UserStateKeys.SUBSCRIBING_PLACE
-        elif self.subscribing_alert:
-            state = UserStateKeys.SUBSCRIBING_ALERT
-        return state
 
     def update_user(self,
                     name=None,
@@ -66,46 +72,57 @@ class User(object):
                     place=None,
                     notification_coords=None,
 
-                    subscribed=False,
-                    subscribing_alert=False,
-                    subscribing_name=False,
-                    subscribing_email=False,
-                    subscribing_place=False
+                    clear_state=False,
+
+                    user_state: UserStateKeys = None,
                     ):
-        # somente um estado por vez
-        states = [subscribing_alert, subscribing_name, subscribing_email, subscribing_place, subscribed]
-        assert len([x for x in states if x]) <= 1
 
         if name is not None:
-            self.name = name
+            self.__name = name
 
         if email is not None:
-            self.email = email
+            self.__email = email
 
         if place is not None:
-            self.place = place
+            self.__place['adress'] = place['adress']
+            self.__place['coords'] = place['coords']
 
         if notification_coords:
-            self.notification_coords = notification_coords
+            self.__notification_coords = notification_coords
 
-        if any([subscribing_alert, subscribing_name, subscribing_email, subscribing_place, subscribed]):
-            self.subscribing_alert = subscribing_alert
-            self.subscribing_name = subscribing_name
-            self.subscribing_email = subscribing_email
-            self.subscribing_place = subscribing_place
-            self.subscribed = subscribed
+        if user_state:
+            self.__user_state = user_state
 
-        self.last_update_time = datetime.now()
+        if clear_state:
+            self.__user_state = None
+
+        self.__last_update_time = datetime.now()
+
+        write_user(self)
 
     def __repr__(self):
         
         user_string = f"""
-name: {self.name}
-email: {self.email}
-place: {self.place}
-last_update_time: {self.last_update_time}
-notification_coords: {self.notification_coords}
+name: {self.__name}
+email: {self.__email}
+place: {self.__place}
+last_update_time: {self.__last_update_time}
+notification_coords: {self.__notification_coords}
 state: {self.state()}
 """
         
         return user_string
+
+
+def write_user(user: User):
+    with open('users.json', 'w') as outfile:
+        json.dump(user.to_dict(), outfile)
+
+
+def read_users():
+    try:
+        with open('users.json') as infile:
+            users = json.load(infile)
+            return users
+    except IOError:
+        return 'O arquivos users.json não existe'

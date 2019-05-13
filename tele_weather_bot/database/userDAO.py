@@ -11,7 +11,7 @@ class UserDAO(object):
     @staticmethod
     def write(user):
         db = firestore.client()
-        chat_id = str(user.chat_id)
+        chat_id = str(user.user_id())
         doc_ref = db.collection(u'users').document(chat_id).set(user.to_dict())
         return doc_ref
 
