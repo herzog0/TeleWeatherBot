@@ -5,23 +5,17 @@ O bot propriamente
 from .weather import WeatherAPI, NotFoundError
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import Notification
-from .google_maps.geocode_functions import GoogleGeoCode, LocationNotFoundException
+from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
-from .database.user import User
-from .database.userDAO import UserDAO
-from .parser.parser import address
+from .database.userDAO import update, state, remove_key, name, email
 from datetime import date as date_type
 
-from pyowm import OWM
-from pyowm.utils import geo
-from pyowm.alertapi30.enums import WeatherParametersEnum, OperatorsEnum, AlertChannelsEnum
-from pyowm.alertapi30.condition import Condition
 
 import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import tele_weather_bot.dev_functions as devfunc
 
 
@@ -31,20 +25,14 @@ class WeatherBot(telepot.Bot):
     def __init__(self,
                  telegram_token: str,
                  open_weather_token: str,
-                 google_maps_token: str,
-                 firebase_certificate: dict,
                  password=""):
         """Construído com tokens das APIs do Telegram e do OpenWeatherMap"""
         self.owm_api = WeatherAPI(open_weather_token)
-        self.gmaps = GoogleGeoCode(google_maps_token)
-        self.repo = UserDAO(firebase_certificate)
 
         if password == "":
             self.password = False
         else:
             self.password = password
-
-        self.users = {}        
 
         self.dev_dict = {}
 
@@ -55,55 +43,59 @@ class WeatherBot(telepot.Bot):
 
     def on_chat_message(self, msg):
 
-        content_type, _, chat_id = telepot.glance(msg)
-
-        if chat_id not in self.users:
-            self.users[chat_id] = User(chat_id)
-        else:
-            self.users[chat_id].update_user()
+        content_type, _, chat_id, _, message_id = telepot.glance(msg, long=True)
+        # - long: (content_type, msg["chat"]["type"], msg["chat"]["id"], msg["date"], msg["message_id"])
+        chat_id = str(chat_id)
 
         # If the message is a text message
         if content_type == 'text':
-            self.evaluate_text(msg)
+            response = self.evaluate_text(msg["text"], chat_id, message_id)
+            if isinstance(response, str):
+                self.markdown_message(chat_id, response)
 
         elif content_type == 'location':
             self.evaluate_location(msg)
 
-    def evaluate_text(self, msg):
-        content_type, _, chat_id, msg_date, msg_id = telepot.glance(msg, long=True)
-        text = msg['text']
+    def evaluate_text(self, text: str, chat_id: str, message_id: int):
         response = None
 
         try:
-            qtype, location = parser.parse(self, chat_id, text)
+            qtype, location = parser.parse(chat_id, text)
 
             if not location:
                 if qtype is FunctionalTypes.DEV_FUNCTIONS_ON:
+                    self.delete_message((chat_id, message_id))
+
                     if self.password:
-                        if chat_id in self.dev_dict and self.dev_dict[chat_id]['DEV']:
-                            self.markdown_message(chat_id, "*Você já é developer!*")
-                        elif devfunc.validate_password(self, msg):
-                            devfunc.set_dev_user(self, msg)
+                        if chat_id in self.dev_dict and self.dev_dict[chat_id]["DEV"]:
+                            return "*Você já é developer!*"
+                        else:
+                            result = devfunc.validate_password(text, self.password)
+                            if result is True:
+                                return devfunc.set_dev_user(self.dev_dict, chat_id)
+                            return result
+
                     else:
-                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+                        return "*Modo developer não configurado*"
 
                 elif qtype is FunctionalTypes.DEV_FUNCTIONS_OFF:
                     if self.password:
-                        devfunc.set_dev_user(self, msg, on=False)
+                        return devfunc.set_dev_user(self.dev_dict, chat_id, on=False)
                     else:
-                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+                        return "*Modo developer não configurado*"
 
                 elif qtype is FunctionalTypes.DEV_COMMANDS:
                     if self.password:
-                        devfunc.list_developer_commands(self, msg)
+                        return devfunc.list_developer_commands()
                     else:
-                        self.markdown_message(chat_id, "*Modo developer não configurado*")
+                        return "*Modo developer não configurado*"
 
                 elif qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
                     #
                     self.evaluate_subscription(chat_id, text)
 
                 elif qtype is FunctionalTypes.INITIAL_MESSAGE:
+                    #
                     self.start(chat_id)
 
                 elif qtype is FunctionalTypes.HELP_REQUEST:
@@ -111,8 +103,7 @@ class WeatherBot(telepot.Bot):
                     self.help(chat_id, text)
 
                 elif qtype is FunctionalTypes.SET_ALARM:
-                    message_id = self.get_message_id(msg)
-                    Notification.set_notification_type(self, message_id)
+                    Notification.set_notification_type(self, (chat_id, message_id))
 
             else:
 
@@ -126,6 +117,8 @@ class WeatherBot(telepot.Bot):
                 for pair in pairs:
                     tag = pair[0]
                     tag_date = pair[1]
+
+                    # todo incluir checagem se api openweather tá online
 
                     if tag is WeatherTypes.WEATHER:
                         weather = self.owm_api.get_weather_description(coords, tag_date)
@@ -159,31 +152,30 @@ class WeatherBot(telepot.Bot):
                     elif tag is WeatherTypes.IS_CLOUDY:
                         self.markdown_message(chat_id, "eh nuvem")
 
-                    if response:
-                        self.markdown_message(chat_id, response)
+                    return response
 
         except MoreThanFiveDaysException as e:
-            self.markdown_message(chat_id, f'{str(e)}')
+            return f'{str(e)}'
         except AssertionError:
-            self.markdown_message(chat_id, '*Infelizmente não reconheci o nome do local :(*')
+            return '*Infelizmente não reconheci o nome do local :(*'
         except CouldNotUnderstandException as e:
-            self.markdown_message(chat_id, f'{str(e)}')
+            return f'{str(e)}'
         except ValueError as e:
-            self.markdown_message(chat_id, f'{str(e)}')
+            return f'{str(e)}'
         except NotFoundError:
-            self.markdown_message(chat_id, '*Infelizmente não reconheci o nome da cidade :(*')
+            return '*Infelizmente não reconheci o nome da cidade :(*'
         except LocationNotFoundException as e:
-            self.markdown_message(chat_id, str(e))
+            return str(e)
 
     def evaluate_location(self, msg):
 
         chat_id, message_id = self.get_message_id(msg)
-        coords = {'lat': msg['location']['latitude'], 'lng': msg['location']['longitude']}
+        coords = {'lat': msg["location"]["latitude"], 'lng': msg["location"]["longitude"]}
 
-        if self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
+        if state(chat_id) is UserStateKeys.SUBSCRIBING_PLACE:
             self.evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_ALERT:
+        elif state(chat_id) is UserStateKeys.SUBSCRIBING_ALERT:
             
             pass
 
@@ -196,6 +188,7 @@ class WeatherBot(telepot.Bot):
 
         # Build message identification
         message_id = self.get_message_id(callback_query)
+        chat_id = str(message_id[0])
 
         # Navigate the callback if it came from the notifications setter
         if query_data.split('.')[0] == 'notification':
@@ -213,11 +206,11 @@ class WeatherBot(telepot.Bot):
             elif info[1] == 'set':
 
                 if info[2] == 'location':
-                    self.users[message_id[0]].update_user(subscribing_alert=True)
+                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_ALERT_PLACE)
                     values = [3]
 
                 elif info[2] == 'place_name':
-                    self.users[message_id[0]].update_user(subscribing_alert=True)
+                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_ALERT_PLACE)
                     values = [4]
 
                 elif info[2] == 'go_back':
@@ -258,7 +251,7 @@ class WeatherBot(telepot.Bot):
         try:
             message_id = telepot.message_identifier(msg)
         except ValueError:
-            message_id = (msg['message']['chat']['id'], msg['message']['message_id'])
+            message_id = (msg["message"]["chat"]["id"], msg["message"]["message_id"])
 
         return message_id
 
@@ -328,35 +321,37 @@ ou   *help previsao* (o mesmo que "ajuda 1")
     
     def evaluate_subscription(self, chat_id, text):
         chat_id = chat_id
-        if not self.users[chat_id].state():
-            self.users[chat_id].update_user(subscribing_name=True)
+        if not state(chat_id):
+            update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_NAME)
             self.markdown_message(chat_id, '*Qual seu nome?*')
 
-        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_NAME:
-            self.users[chat_id].update_user(name=text, subscribing_email=True)
+        elif state(chat_id) is UserStateKeys.SUBSCRIBING_NAME:
+            update(chat_id, UserDataKeys.NAME, text)
+            update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_EMAIL)
             self.markdown_message(chat_id, '*Qual seu e-mail?*')
 
-        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_EMAIL:
-            self.users[chat_id].update_user(email=text, subscribing_place=True)
+        elif state(chat_id) is UserStateKeys.SUBSCRIBING_EMAIL:
+            update(chat_id, UserDataKeys.EMAIL, text)
+            update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_PLACE)
             self.markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
 
-        elif self.users[chat_id].state() is UserStateKeys.SUBSCRIBING_PLACE:
-            adress, coords = None, None
+        elif state(chat_id) is UserStateKeys.SUBSCRIBING_PLACE:
+            address = None
             try:
-                adress, coords = self.gmaps.get_user_address_by_name(text)
+                address, coords = get_user_address_by_name(text)
+                update(chat_id, UserDataKeys.SUBSCRIBED_COORDS, coords)
             except LocationNotFoundException as e:
+                remove_key(chat_id, UserDataKeys.SUBSCRIBED_COORDS)
                 self.markdown_message(chat_id, f'*{str(e)}*')
-            self.users[chat_id].update_user(place={'adress': adress, 'coords': coords}, subscribed=True)
-            self.users[chat_id].subscribed = True
-            self.repo.write(self.users[chat_id])
+            remove_key(chat_id, UserDataKeys.STATE)
             self.markdown_message(chat_id, f"""
 *Parabéns!*
 *Agora você possui funcionalidade especiais.*
 
 Você inseriu as informações:
-*Nome*: {self.users[chat_id].name}
-*Email*: {self.users[chat_id].email}
-*Localização*: {self.users[chat_id].place['adress'] or 'Local não informado'}
+*Nome*: {name(chat_id)}
+*Email*: {email(chat_id)}
+*Localização*: {address or 'Local não informado'}
 
 Caso queira alterar os dados basta recomeçar o cadastro.
 Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.
