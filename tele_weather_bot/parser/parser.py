@@ -2,20 +2,23 @@
 O parser propriamente
 """
 import enchant
-from .question import WeatherTypes, FunctionalTypes
 import datetime
+
 from datetime import timedelta
 from calendar import monthrange
+
+from .question import WeatherTypes, FunctionalTypes
+from ..database.userDAO import state, subscribed_coords
+from ..google_maps.geocode_functions import get_user_address_by_name
+
 
 week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
              'amanha',
              'haja', 'hoje', 'agora']
 
 
-def address(bot, place_name):
-
-    full_address, coordinates = bot.gmaps.get_user_address_by_name(place_name)
-
+def address(place_name):
+    full_address, coordinates = get_user_address_by_name(place_name)
     return full_address, coordinates
 
 
@@ -133,10 +136,7 @@ def find_tag_date_pairs(requests: list):
     return pairs
 
 
-"""Parser das entradas dos usuários"""
-
-
-def parse(bot, chat_id, text: str) -> tuple:
+def parse(chat_id: str, text: str) -> tuple:
     """Tentar ler a questão do usuário e decidir seu tipo e o que precisa para respondê-lo"""
 
     words = text.lower().strip().split()
@@ -147,11 +147,12 @@ def parse(bot, chat_id, text: str) -> tuple:
             return functional_type, None
 
     # Se está no meio de algum processo de inscrição
-    if bot.users[chat_id].state():
-        return bot.users[chat_id].state(), None
+    usr_stt = state(chat_id)
+    if usr_stt:
+        return usr_stt, None
 
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
-    if ('em' not in words and not bot.users[chat_id].place()) or ('em' in words and words.index('em') == words[-1]):
+    if ('em' not in words and not subscribed_coords(chat_id)) or ('em' in words and words.index('em') == words[-1]):
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
                                           "Você não possui um lugar cadastrado. Neste caso, lembre-se de inserir o nome"
                                           " do lugar ao final da frase (e apenas um lugar), antecedido pela palavra "
@@ -161,15 +162,15 @@ def parse(bot, chat_id, text: str) -> tuple:
         if 'em' in words:
             place_name = words[words.index('em') + 1:]
             place_name = " ".join(place_name)
-            location = address(bot, place_name)
+            location = address(place_name)
             if not location:
                 raise CouldNotUnderstandException("*Infelizmente não encontrei um local de pesquisa válido.* Tente "
                                                   "inserir outro nome após a palavra-chave *em*.")
             sentence = words[:words.index('em')]
         else:
-            coords = bot.users[chat_id].place()['coords']
+            coords = subscribed_coords(chat_id)
             coords_f = f'{coords["lat"]} {coords["lng"]}'
-            location = address(bot, coords_f)
+            location = address(coords_f)
             sentence = words
 
         request = []

@@ -14,8 +14,6 @@ def main():
 
         bot = WeatherBot(telegram_token=TOKENS_HERE.TELEGRAM_TOKEN,
                          open_weather_token=TOKENS_HERE.OWM_TOKEN,
-                         google_maps_token=TOKENS_HERE.GOOGLEMAPS_TOKEN,
-                         firebase_certificate=TOKENS_HERE.FIREBASE_CERTIFICATE,
                          password=password)
         bot.run_forever()
 

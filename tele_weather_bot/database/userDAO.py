@@ -1,36 +1,140 @@
 import firebase_admin
+
 from firebase_admin import credentials
 from firebase_admin import firestore
+from google.cloud.exceptions import NotFound
+
+from .user_keys import UserDataKeys, UserStateKeys
+
+from TOKENS_HERE import FIREBASE_CERTIFICATE
 
 
-class UserDAO(object):
-    def __init__(self, firebase_certificate):
-        cred = credentials.Certificate(firebase_certificate)
-        firebase_admin.initialize_app(cred)
+cred = credentials.Certificate(FIREBASE_CERTIFICATE)
+firebase_admin.initialize_app(cred)
+users = firestore.client().collection(u'users')
 
-    @staticmethod
-    def write(user):
-        db = firestore.client()
-        chat_id = str(user.user_id())
-        doc_ref = db.collection(u'users').document(chat_id).set(user.to_dict())
-        return doc_ref
 
-    @staticmethod
-    def read(chat_id):
-        db = firestore.client()
-        chat_id = str(chat_id)
-        doc_ref = db.collection(u'users').document(chat_id)
-        return doc_ref.get().to_dict()
+def __get_value(user_chat_id: str, key: str):
 
-    @staticmethod
-    def update(user):
-        db = firestore.client()
-        chat_id = str(user.chat_id)
-        doc_ref = db.collection(u'users').document(chat_id)
-        doc_ref.update(user.to_dict())
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :param key: retrieve value from this key, or key path
+    :return: retrieved value or None
+    """
 
-    @staticmethod
-    def delete(chat_id):
-        db = firestore.client()
-        chat_id = str(chat_id)
-        db.collection(u'users').document(chat_id).delete()
+    try:
+        response = users.document(user_chat_id).get().get(key)
+        for item in UserStateKeys:
+            if response == item.value:
+                response = item
+        return response
+    except KeyError:
+        print(f"Key {key} doesn't exist to the {user_chat_id} document")
+        return None
+
+
+def name(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: user name or None
+    """
+    return __get_value(user_chat_id, UserDataKeys.NAME.value)
+
+
+def email(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: user email or None
+    """
+    return __get_value(user_chat_id, UserDataKeys.EMAIL.value)
+
+
+def subscribed_coords(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: coordinates for subscribed place or None
+    """
+    return __get_value(user_chat_id, UserDataKeys.SUBSCRIBED_COORDS.value)
+
+
+def notification_coords(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: coordinates set for notification or None
+    """
+    return __get_value(user_chat_id, UserDataKeys.NOTIFICATION_COORDS.value)
+
+
+def last_update(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: user's last update time of the form firestore.SERVER_TIMESTAMP
+    """
+    return __get_value(user_chat_id, UserDataKeys.LAST_UPDATE.value)
+
+
+def state(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: user state or None
+    """
+    return __get_value(user_chat_id, UserDataKeys.STATE.value)
+
+
+def update(user_chat_id: str, key: UserDataKeys, value):
+    """
+    :param user_chat_id: chat_id talking to the bot
+
+    :param key: user information key to be created/updated,
+    keys are enum objects from :attr:`~.user_keys`
+
+    :param value: value to be written in the user key field
+
+    :return: None
+
+
+    This method is responsible for creating or updating an existing
+    user document in the firebase cloud.
+    There is no "write" method available, only this one.
+
+    If the document doesn't exist, it is created and then updated with
+    the passed arguments.
+
+    This makes a cleaner and less error susceptible code.
+
+    """
+
+    if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
+        if not (isinstance(value, dict) or ("lat" in value and "lng" in value)):
+            raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
+
+    if isinstance(value, UserStateKeys):
+        value = value.value
+
+    try:
+        users.document(user_chat_id).update(
+            {key.value: value, UserDataKeys.LAST_UPDATE.value: firestore.firestore.SERVER_TIMESTAMP})
+    except NotFound:
+        users.document(user_chat_id).set({})
+        users.document(user_chat_id).update(
+            {key.value: value, UserDataKeys.LAST_UPDATE.value: firestore.firestore.SERVER_TIMESTAMP})
+
+
+def remove_key(user_chat_id: str, key: UserDataKeys):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :param key: field to be removed
+    :return: None
+
+    This method has the ethos of making concise user information.
+    Use it whenever a field is not going to be used anymore. Don't keep None values in the database fields.
+
+    """
+
+    try:
+        users.document(user_chat_id).update({
+            key.value: firestore.firestore.DELETE_FIELD
+        })
+    except NotFound:
+        return None
+
