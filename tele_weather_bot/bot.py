@@ -7,7 +7,7 @@ from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandExc
 from .alerts.notification import Notification
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
-from .database.userDAO import update, state, remove_key, name, email
+from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
 from datetime import date as date_type
 
 
@@ -15,7 +15,7 @@ import telepot
 from telepot.loop import MessageLoop
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import tele_weather_bot.dev_functions as devfunc
 
 
@@ -38,14 +38,16 @@ class WeatherBot(telepot.Bot):
 
         super().__init__(telegram_token)
 
-    def update_database(self):
-        pass
-
     def on_chat_message(self, msg):
 
         content_type, _, chat_id, _, message_id = telepot.glance(msg, long=True)
         # - long: (content_type, msg["chat"]["type"], msg["chat"]["id"], msg["date"], msg["message_id"])
         chat_id = str(chat_id)
+
+        # apagar estados do usuário se ele ficou inativo por mais de 40 segundos
+        if last_update(chat_id) and \
+                datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=40):
+            remove_key(chat_id, UserDataKeys.STATE)
 
         # If the message is a text message
         if content_type == 'text':
@@ -91,8 +93,11 @@ class WeatherBot(telepot.Bot):
                         return "*Modo developer não configurado*"
 
                 elif qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
-                    #
-                    self.evaluate_subscription(chat_id, text)
+                    if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE or \
+                            qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
+                        self.set_alert_location(chat_id, text)
+                    else:
+                        self.evaluate_subscription(chat_id, text)
 
                 elif qtype is FunctionalTypes.INITIAL_MESSAGE:
                     #
@@ -110,7 +115,7 @@ class WeatherBot(telepot.Bot):
                 full_adress = location[0]
                 coords = location[1]
                 pairs = qtype
-                
+
                 self.markdown_message(chat_id, "*Certo, encontrei este endereço:*")
                 self.markdown_message(chat_id, full_adress)
 
@@ -170,18 +175,40 @@ class WeatherBot(telepot.Bot):
     def evaluate_location(self, msg):
 
         chat_id, message_id = self.get_message_id(msg)
-        coords = {'lat': msg["location"]["latitude"], 'lng': msg["location"]["longitude"]}
+        coords = {"lat": msg["location"]["latitude"], "lng": msg["location"]["longitude"]}
 
         if state(chat_id) is UserStateKeys.SUBSCRIBING_PLACE:
             self.evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-        elif state(chat_id) is UserStateKeys.SUBSCRIBING_ALERT:
-            
-            pass
+        elif state(chat_id) is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
+                state(chat_id) is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+            self.delete_message((chat_id, message_id))
+            print("setou")
+            self.set_alert_location(chat_id, coords)
 
         else:
             # forecast call
             pass
+
+    def set_alert_location(self, chat_id, location):
+        """
+        :param chat_id: the chat_id talking to the bot
+        :param location: the location sent, may be a dictionary with 'lat' and 'lng' keys or a string
+        :return: None
+
+        This method's ethos is to ensure that the user sends a valid location to the alerts subscribing system.
+
+        """
+        try:
+            address, coords = get_user_address_by_name(location)
+            update(chat_id, UserDataKeys.NOTIFICATION_COORDS, coords)
+            self.markdown_message(chat_id, f"""
+Certo, o local configurado para receber notificações é:
+*{address}*
+Envie *ok* para confirmar ou um uma outra localização para corrigir esta. 
+""")
+        except LocationNotFoundException:
+            self.markdown_message(chat_id, "Insira um local válido")
 
     def on_callback_query(self, callback_query):
         query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
@@ -189,6 +216,7 @@ class WeatherBot(telepot.Bot):
         # Build message identification
         message_id = self.get_message_id(callback_query)
         chat_id = str(message_id[0])
+        query_id = str(query_id)
 
         # Navigate the callback if it came from the notifications setter
         if query_data.split('.')[0] == 'notification':
@@ -198,39 +226,27 @@ class WeatherBot(telepot.Bot):
             if info[1] == 'type':
 
                 if info[2] == 'daily':
+                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE)
                     values = [1]
 
                 elif info[2] == 'trigger':
+                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE)
                     values = [2]
 
             elif info[1] == 'set':
 
-                if info[2] == 'location':
-                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_ALERT_PLACE)
-                    values = [3]
-
-                elif info[2] == 'place_name':
-                    update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_ALERT_PLACE)
-                    values = [4]
+                if info[2] == 'use_subscribed_place':
+                    self.set_alert_location(chat_id, subscribed_coords(chat_id))
 
                 elif info[2] == 'go_back':
-                    # todo self.update_user(message_id[0])
+                    remove_key(chat_id, UserDataKeys.STATE)
                     values = [5]
 
-            elif info[1] == 'get':
-
-                if info[2] == 'cancel':
-                    # todo self.update_user(message_id[0])
-                    if info[3] == 'by_location':
-                        values = [1]
-                    elif info[3] == 'by_place_name':
-                        values = [1]
-
             options = {
-                "1": "Notification.set_daily_notification(self, message_id)",
-                "2": "",
-                "3": "Notification.set_daily_notification_by_location(self, message_id)",
-                "4": "Notification.set_daily_notification_by_place_name(self, message_id)",
+                "1": "Notification.set_notification_location(self, message_id)",
+                "2": "Notification.set_notification_location(self, message_id, by_trigger=True)",
+                "3": "",
+                "4": "",
                 "5": "Notification.set_notification_type(self, message_id, query_id)",
             }
 
@@ -318,7 +334,7 @@ ou   *help previsao* (o mesmo que "ajuda 1")
             [InlineKeyboardButton(text='Exibir comandos disponíveis', callback_data='comandos')]
         ])
         self.simple_message(chat_id, initial_response_text, reply_markup=keyboard)
-    
+
     def evaluate_subscription(self, chat_id, text):
         chat_id = chat_id
         if not state(chat_id):
@@ -357,7 +373,7 @@ Caso queira alterar os dados basta recomeçar o cadastro.
 Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.
 
 """)
-    
+
     def run_forever(self, *args, **kwargs):
         """Roda o bot, bloqueando a thread"""
 
@@ -387,7 +403,7 @@ Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades
         return self.editMessageText(message_id, message, parse_mode="Markdown", reply_markup=keyboard, **kwargs)
 
     def answer_callback_query(self, query_id, message='', **kwargs):
-        return self.answerCallbackQuery(query_id, message, **kwargs)
+        return self.answerCallbackQuery(query_id, text=message, **kwargs)
 
     def delete_message(self, message_id):
         return self.deleteMessage(message_id)

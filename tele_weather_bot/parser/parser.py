@@ -7,7 +7,7 @@ import datetime
 from datetime import timedelta
 from calendar import monthrange
 
-from .question import WeatherTypes, FunctionalTypes
+from .question_keys import WeatherTypes, FunctionalTypes
 from ..database.userDAO import state, subscribed_coords
 from ..google_maps.geocode_functions import get_user_address_by_name
 

@@ -12,8 +12,11 @@ def get_user_address_by_coordinates(lat: float, lon: float):
     return loc[0]['formatted_address']
 
 
-def get_user_address_by_name(loc_name: str):
+def get_user_address_by_name(loc_name):
+    if isinstance(loc_name, dict):
+        loc_name = f'{loc_name["lat"]} {loc_name["lng"]}'
     loc = geocode(__gmaps, loc_name)
+
     if not loc:
         raise LocationNotFoundException("Não consegui encontrar nenhum endereço correspondente.")
     return loc[0]['formatted_address'],  loc[0]['geometry']['location']

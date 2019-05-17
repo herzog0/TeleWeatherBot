@@ -3,6 +3,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from google.cloud.exceptions import NotFound
+from datetime import datetime
 
 from .user_keys import UserDataKeys, UserStateKeys
 
@@ -15,7 +16,6 @@ users = firestore.client().collection(u'users')
 
 
 def __get_value(user_chat_id: str, key: str):
-
     """
     :param user_chat_id: chat_id talking to the bot
     :param key: retrieve value from this key, or key path
@@ -113,11 +113,11 @@ def update(user_chat_id: str, key: UserDataKeys, value):
 
     try:
         users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: firestore.firestore.SERVER_TIMESTAMP})
+            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
     except NotFound:
         users.document(user_chat_id).set({})
         users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: firestore.firestore.SERVER_TIMESTAMP})
+            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
 
 
 def remove_key(user_chat_id: str, key: UserDataKeys):
