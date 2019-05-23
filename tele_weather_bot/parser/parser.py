@@ -17,15 +17,13 @@ week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domin
              'haja', 'hoje', 'agora']
 
 
-enchant.set_param("enchant.myspell.dictionary.path", "./")
-
-
 def address(place_name):
     full_address, coordinates = get_user_address_by_name(place_name)
     return full_address, coordinates
 
 
 def list_of_suggestions(word: str):
+    enchant.set_param("enchant.myspell.dictionary.path", "tele_weather_bot/parser/")
     if not len(word.split()) == 1:
         raise ValueError("lista de sugestões deve receber apenas uma palavra")
     d = enchant.Dict('pt_BR')
