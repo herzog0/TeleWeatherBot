@@ -1,7 +1,5 @@
 PROJECT = tele_weather_bot
 VIRTUAL_ENV = env
-FUNCTION_NAME = run
-REGION = us-east-1
 
 install: virtual download_and_activate
 build: clean_package build_package_tmp copy_python remove_unused zip
@@ -28,7 +26,9 @@ clean_package:
 
 build_package_tmp:
 	mkdir -p ./package/tmp/lib
-	cp -a ./$(PROJECT)/. ./package/tmp/
+	cp -a ./$(PROJECT) ./package/tmp/
+	cp main.py ./package/tmp/
+	cp TOKENS_HERE.py ./package/tmp/
 
 copy_python:
 	if test -d $(VIRTUAL_ENV)/lib; then \
@@ -43,7 +43,7 @@ remove_unused:
 	rm -rf ./package/tmp/easy-install*
 	rm -rf ./package/tmp/setuptools*
 
-zip:
+zip:	
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
 
 
