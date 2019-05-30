@@ -72,6 +72,8 @@ def find_date(word: str):
             day_index = week_days.index(word)
         except IndexError:
             return []
+        except ValueError:
+            return []
         if day_index in [10, 11, 12, 13]:
             return less_than_five_days(datetime.datetime.now().weekday(), w=True)
         elif day_index in [8, 9]:
