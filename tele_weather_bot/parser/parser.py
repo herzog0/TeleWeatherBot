@@ -10,11 +10,16 @@ from .question_keys import WeatherTypes, FunctionalTypes
 from ..database.userDAO import state, subscribed_coords
 from ..google_maps.geocode_functions import get_user_address_by_name
 
-
-# em caso de alteração, corrigir a função "find_date"
-week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'sabado', 'domingo',
-             'amanha', 'amanhã',
-             'haja', 'hoje', 'agora', 'hj']
+# adicionar variações das escritas dos dias aqui
+week_days = [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
+             {1: ['terça', 'ter', 'terca']},
+             {2: ['quarta', 'qua', 'quart', 'quata']},
+             {3: ['quinta', 'qui', 'quinta']},
+             {4: ['sexta', 'sext', 'sxt', 'sex']},
+             {5: ['sábado', 'sabado', 'sbdo', 'sabdo', 'sab', 'sbd']},
+             {6: ['domingo', 'dmg', 'dom', 'doming', 'dmingo', 'dming']},
+             {(datetime.datetime.now().weekday() + 1) % 7: ['amanha', 'amanhã', 'amnh', 'amnha', 'amnhã']},
+             {datetime.datetime.now().weekday(): ['haja', 'hoje', 'agora', 'hj', 'hoj', 'oge', 'oje']}]
 
 
 def address(place_name):
@@ -48,8 +53,8 @@ def less_than_five_days(value, m=False, w=False):
     elif 0 <= days_left + value <= 5:
         delta_days = days_left + value
     else:
-        raise MoreThanFiveDaysException(f"*{week_days[value].capitalize() if w else f'Dia {value}'} está muito* "
-                                        f"*distante*\n"
+        raise MoreThanFiveDaysException(f"*{week_days[value].get(value)[0].capitalize() if w else f'Dia {value}'} "
+                                        f"está muito* *distante*\n"
                                         f"Escolha uma data no máximo 5 dias à frente")
 
     if not delta_days and not delta_days == 0:
@@ -68,22 +73,11 @@ def find_date(word: str):
         int(word)
         return less_than_five_days(int(word), m=True)
     except ValueError:
-        try:
-            day_index = week_days.index(word)
-        except IndexError:
-            return []
-        except ValueError:
-            return []
-        if day_index in [10, 11, 12, 13]:
-            return less_than_five_days(datetime.datetime.now().weekday(), w=True)
-        elif day_index in [8, 9]:
-            return less_than_five_days((datetime.datetime.now().weekday() + 1) % 7, w=True)
-        elif day_index in [5, 6]:
-            return less_than_five_days(5, w=True)
-        elif day_index == 7:
-            return less_than_five_days(6, w=True)
-        else:
-            return less_than_five_days(day_index, w=True)
+        for wd in week_days:
+            if word in list(wd.values())[0]:
+                return less_than_five_days(list(wd.keys())[0], w=True)
+
+        return []
     except MoreThanFiveDaysException as e:
         raise e
 
