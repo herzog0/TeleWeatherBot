@@ -1,7 +1,6 @@
 """
 O parser propriamente
 """
-import enchant
 import datetime
 
 from datetime import timedelta
@@ -12,22 +11,15 @@ from ..database.userDAO import state, subscribed_coords
 from ..google_maps.geocode_functions import get_user_address_by_name
 
 
-week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo',
-             'amanha',
-             'haja', 'hoje', 'agora']
+# em caso de alteração, corrigir a função "find_date"
+week_days = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'sabado', 'domingo',
+             'amanha', 'amanhã',
+             'haja', 'hoje', 'agora', 'hj']
 
 
 def address(place_name):
     full_address, coordinates = get_user_address_by_name(place_name)
     return full_address, coordinates
-
-
-def list_of_suggestions(word: str):
-    enchant.set_param("enchant.myspell.dictionary.path", "tele_weather_bot/parser/")
-    if not len(word.split()) == 1:
-        raise ValueError("lista de sugestões deve receber apenas uma palavra")
-    d = enchant.Dict('pt_BR')
-    return d.suggest(word)
 
 
 def less_than_five_days(value, m=False, w=False):
@@ -76,15 +68,20 @@ def find_date(word: str):
         int(word)
         return less_than_five_days(int(word), m=True)
     except ValueError:
-        sug_words = list_of_suggestions(word)
         try:
-            day_index = week_days.index(list(filter(lambda x: x in week_days, sug_words))[0])
+            day_index = week_days.index(word)
         except IndexError:
             return []
-        if day_index in [8, 9, 10]:
+        except ValueError:
+            return []
+        if day_index in [10, 11, 12, 13]:
             return less_than_five_days(datetime.datetime.now().weekday(), w=True)
-        elif day_index == 7:
+        elif day_index in [8, 9]:
             return less_than_five_days((datetime.datetime.now().weekday() + 1) % 7, w=True)
+        elif day_index in [5, 6]:
+            return less_than_five_days(5, w=True)
+        elif day_index == 7:
+            return less_than_five_days(6, w=True)
         else:
             return less_than_five_days(day_index, w=True)
     except MoreThanFiveDaysException as e:
@@ -92,10 +89,8 @@ def find_date(word: str):
 
 
 def find_request_type(word: str):
-    sug_words = list_of_suggestions(word)
-
     for weather_type in WeatherTypes:
-        if any(word in weather_type.value for word in sug_words):
+        if word in weather_type.value:
             return weather_type
 
 
@@ -176,8 +171,8 @@ def parse(chat_id: str, text: str) -> tuple:
 
         request = []
         for word in sentence:
-            try1 = find_date(word)
-            try2 = find_request_type(word)
+            try1 = find_request_type(word)
+            try2 = find_date(word)
             try3 = find_hour(word)
             if try1:
                 request.append(try1)
