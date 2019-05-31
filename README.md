@@ -107,7 +107,7 @@ Em seguida, envie a mensagem:
 ## Arquitetura
 ![Arquitetura Vai Chover Bot](https://i.imgur.com/EEu3XAh.png)
 
-## Deploy no Clou Functions
+## Deploy no Cloud Functions
 
 Rodar o comando abaixo na pasta do projeto:
 ```bash
