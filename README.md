@@ -117,3 +117,10 @@ make build
 Um pacote .zip será gerado na pasta "package"
 
 Subir este pacote para a função no cloud
+
+
+## Brainstorm
+
+![Primeira rodada](https://i.imgur.com/snds7ff.jpg)
+
+![Segunda rodada](https://i.imgur.com/ZXSTDGb.jpg)
