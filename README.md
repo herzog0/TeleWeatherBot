@@ -105,7 +105,7 @@ Em seguida, envie a mensagem:
 - Alerta de mudanças bruscas no clima.
 
 ## Arquitetura
-![Arquitetura Vai Chover Bot](https://i.imgur.com/Rt6o1zI.jpg)
+![Arquitetura Vai Chover Bot](https://imgur.com/EEu3XAh)
 
 ## Deploy no Cloud (v1)
 Abra o cloud console
