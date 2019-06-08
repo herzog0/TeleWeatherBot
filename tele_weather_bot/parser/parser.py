@@ -8,7 +8,7 @@ from calendar import monthrange
 
 from .question_keys import WeatherTypes, FunctionalTypes
 from ..database.userDAO import state, subscribed_coords
-from ..google_maps.geocode_functions import set_gmaps_obj, get_user_address_by_name
+from ..google_maps.geocode_functions import set_gmaps_obj
 
 # adicionar variações das escritas dos dias aqui, correspondendo a chave com o valor do dia da semana correspondente
 week_days = [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
@@ -22,9 +22,12 @@ week_days = [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
              {datetime.datetime.now().weekday(): ['haja', 'hoje', 'agora', 'hj', 'hoj', 'oge', 'oje']}]
 
 
-def address(place_name):
-    set_gmaps_obj()
-    full_address, coordinates = get_user_address_by_name(place_name)
+def address(place_name, gobj=None):
+    if not gobj:
+        gmaps = set_gmaps_obj()
+    else:
+        gmaps = set_gmaps_obj(gobj)
+    full_address, coordinates = gmaps.get_user_address_by_name(place_name)
     return full_address, coordinates
 
 
@@ -129,6 +132,8 @@ def find_tag_date_pairs(requests: list):
 
 def parse(chat_id: str, text: str) -> tuple:
     """Tentar ler a questão do usuário e decidir seu tipo e o que precisa para respondê-lo"""
+
+    set_gmaps_obj()
 
     words = text.lower().strip().split()
 

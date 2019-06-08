@@ -6,6 +6,7 @@ from TOKENS_HERE import GOOGLEMAPS_TOKEN
 def set_gmaps_obj(obj=googlemaps.Client(key=GOOGLEMAPS_TOKEN)):
     global gmaps
     gmaps = obj
+    return obj
 
 
 def get_user_address_by_coordinates(lat: float, lon: float):
