@@ -1,8 +1,18 @@
-from tele_weather_bot.parser.parser import find_hour, find_date, find_request_type, parse, MoreThanFiveDaysException, \
-    week_days, find_tag_date_pairs
+from tele_weather_bot.parser.parser import find_hour, find_date, MoreThanFiveDaysException, week_days, \
+    find_tag_date_pairs, address
 from datetime import datetime, timedelta
 from tele_weather_bot.parser.question_keys import WeatherTypes
+from tele_weather_bot.google_maps.geocode_functions import set_gmaps_obj
+from .mock_classes.mock_geocode_functions import GeoMock, LocationNotFoundException
 import pytest
+
+
+def test_address():
+    gmaps = GeoMock()
+    assert address("campinas", gmaps) == ("campinas", None)
+    assert address({"lat": 20.2, "lng": 30.3}, gmaps) == ("20.2 30.3", None)
+    with pytest.raises(LocationNotFoundException):
+        address("", gmaps)
 
 
 def test_find_hour():
