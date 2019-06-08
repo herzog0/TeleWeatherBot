@@ -10,7 +10,7 @@ from .question_keys import WeatherTypes, FunctionalTypes
 from ..database.userDAO import state, subscribed_coords
 from ..google_maps.geocode_functions import get_user_address_by_name
 
-# adicionar variações das escritas dos dias aqui
+# adicionar variações das escritas dos dias aqui, correspondendo a chave com o valor do dia da semana correspondente
 week_days = [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
              {1: ['terça', 'ter', 'terca']},
              {2: ['quarta', 'qua', 'quart', 'quata']},
