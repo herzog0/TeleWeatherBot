@@ -1,5 +1,4 @@
 import json
-import flask
 
 from tele_weather_bot.bot import receiver
 
