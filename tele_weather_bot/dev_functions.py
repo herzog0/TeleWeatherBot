@@ -1,6 +1,3 @@
-import telepot
-
-
 def set_dev_user(dev_dict: dict, chat_id: str, on=True):
 
     if on:
