@@ -4,16 +4,13 @@ O bot propriamente
 
 from .weather import WeatherAPI, NotFoundError
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
-from .alerts.notification import Notification
+from .alerts.notification import set_notification_type
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
 from datetime import date as date_type
 
 from .communication.send_to_user import markdown_message, delete_message, simple_message
-
-from .communication.send_to_user import bot
-# todo remover essa importação do bot
 
 from TOKENS_HERE import OWM_TOKEN, PASSWORD
 
@@ -23,7 +20,6 @@ from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 from datetime import datetime, timedelta
 import tele_weather_bot.dev_functions as devfunc
 
-owm_api = WeatherAPI(OWM_TOKEN)
 
 if not PASSWORD:
     print("Password not set, dev functions not available")
@@ -104,9 +100,11 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                 call_help(chat_id, text)
 
             elif qtype is FunctionalTypes.SET_ALARM:
-                Notification.set_notification_type(bot, (chat_id, message_id))
+                set_notification_type((chat_id, message_id))
 
         else:
+
+            owm_api = WeatherAPI(OWM_TOKEN)
 
             full_adress = location[0]
             coords = location[1]

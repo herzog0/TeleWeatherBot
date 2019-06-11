@@ -8,26 +8,24 @@ from calendar import monthrange
 
 from .question_keys import WeatherTypes, FunctionalTypes
 from ..database.userDAO import state, subscribed_coords
-from ..google_maps.geocode_functions import set_gmaps_obj
-
-# adicionar variações das escritas dos dias aqui, correspondendo a chave com o valor do dia da semana correspondente
-week_days = [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
-             {1: ['terça', 'ter', 'terca']},
-             {2: ['quarta', 'qua', 'quart', 'quata']},
-             {3: ['quinta', 'qui', 'quinta']},
-             {4: ['sexta', 'sext', 'sxt', 'sex']},
-             {5: ['sábado', 'sabado', 'sbdo', 'sabdo', 'sab', 'sbd']},
-             {6: ['domingo', 'dmg', 'dom', 'doming', 'dmingo', 'dming']},
-             {(datetime.datetime.now().weekday() + 1) % 7: ['amanha', 'amanhã', 'amnh', 'amnha', 'amnhã']},
-             {datetime.datetime.now().weekday(): ['haja', 'hoje', 'agora', 'hj', 'hoj', 'oge', 'oje']}]
+from ..google_maps.geocode_functions import get_user_address_by_name
 
 
-def address(place_name, gobj=None):
-    if not gobj:
-        gmaps = set_gmaps_obj()
-    else:
-        gmaps = set_gmaps_obj(gobj)
-    full_address, coordinates = gmaps.get_user_address_by_name(place_name)
+def week_days():
+    # adicionar variações das escritas dos dias aqui, correspondendo a chave com o valor do dia da semana correspondente
+    return [{0: ['segunda', 'seg', 'segnda', 'sgnda']},
+            {1: ['terça', 'ter', 'terca']},
+            {2: ['quarta', 'qua', 'quart', 'quata']},
+            {3: ['quinta', 'qui', 'quinta']},
+            {4: ['sexta', 'sext', 'sxt', 'sex']},
+            {5: ['sábado', 'sabado', 'sbdo', 'sabdo', 'sab', 'sbd']},
+            {6: ['domingo', 'dmg', 'dom', 'doming', 'dmingo', 'dming']},
+            {(datetime.datetime.now().weekday() + 1) % 7: ['amanha', 'amanhã', 'amnh', 'amnha', 'amnhã']},
+            {datetime.datetime.now().weekday(): ['haja', 'hoje', 'agora', 'hj', 'hoj', 'oge', 'oje']}]
+
+
+def address(place_name):
+    full_address, coordinates = get_user_address_by_name(place_name)
     return full_address, coordinates
 
 
@@ -57,7 +55,7 @@ def less_than_five_days(value, m=False, w=False):
     elif 0 <= days_left + value <= 5:
         delta_days = days_left + value
     else:
-        raise MoreThanFiveDaysException(f"*{week_days[value].get(value)[0].capitalize() if w else f'Dia {value}'} "
+        raise MoreThanFiveDaysException(f"*{week_days()[value].get(value)[0].capitalize() if w else f'Dia {value}'} "
                                         f"está muito* *distante*\n"
                                         f"Escolha uma data no máximo 5 dias à frente")
 
@@ -77,7 +75,7 @@ def find_date(word: str):
         int(word)
         return less_than_five_days(int(word), m=True)
     except ValueError:
-        for wd in week_days:
+        for wd in week_days():
             if word in list(wd.values())[0]:
                 return less_than_five_days(list(wd.keys())[0], w=True)
 
@@ -132,8 +130,6 @@ def find_tag_date_pairs(requests: list):
 
 def parse(chat_id: str, text: str) -> tuple:
     """Tentar ler a questão do usuário e decidir seu tipo e o que precisa para respondê-lo"""
-
-    set_gmaps_obj()
 
     words = text.lower().strip().split()
 

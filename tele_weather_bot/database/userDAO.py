@@ -9,10 +9,8 @@ from .user_keys import UserDataKeys, UserStateKeys
 
 from TOKENS_HERE import FIREBASE_CERTIFICATE
 
-
-cred = credentials.Certificate(FIREBASE_CERTIFICATE)
-firebase_admin.initialize_app(cred)
-users = firestore.client().collection(u'users')
+__cred = credentials.Certificate(FIREBASE_CERTIFICATE)
+firebase_admin.initialize_app(__cred)
 
 
 def __get_value(user_chat_id: str, key: str):
@@ -21,8 +19,8 @@ def __get_value(user_chat_id: str, key: str):
     :param key: retrieve value from this key, or key path
     :return: retrieved value or None
     """
-
     try:
+        users = firestore.client().collection(u'users')
         response = users.document(user_chat_id).get().get(key)
         for item in UserStateKeys:
             if response == item.value:
@@ -111,6 +109,8 @@ def update(user_chat_id: str, key: UserDataKeys, value):
     if isinstance(value, UserStateKeys):
         value = value.value
 
+    users = firestore.client().collection(u'users')
+
     try:
         users.document(user_chat_id).update(
             {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
@@ -132,9 +132,9 @@ def remove_key(user_chat_id: str, key: UserDataKeys):
     """
 
     try:
+        users = firestore.client().collection(u'users')
         users.document(user_chat_id).update({
             key.value: firestore.firestore.DELETE_FIELD
         })
     except NotFound:
         return None
-
