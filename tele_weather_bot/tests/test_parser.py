@@ -25,7 +25,7 @@ def test_find_date():
     # passando dia da semana cinco dias a frente
 
     wd = (datetime.now().weekday() + 5) % 7
-    wd = week_days[wd].get(wd)[0]
+    wd = (week_days())[wd].get(wd)[0]
     assert find_date(wd).date() == (datetime.now() + timedelta(days=5)).date()
 
     with pytest.raises(MoreThanFiveDaysException):
