@@ -143,6 +143,16 @@ def parse(chat_id: str, text: str) -> tuple:
     if usr_stt:
         return usr_stt, None
 
+    try:
+        assert len(words) == 2
+        float(words[0])
+        float(words[1])
+        words = ["tempo", "em", words[0], words[1]]
+    except AssertionError:
+        pass
+    except ValueError:
+        pass
+
     # Se não for nenhum dos comandos funcionais, tente encontrar a requisição climática
     if ('em' not in words and not subscribed_coords(chat_id)) or ('em' in words and words.index('em') == words[-1]):
         raise CouldNotUnderstandException("*Não sei se entendi um local de pesquisa*.\n"
@@ -176,8 +186,8 @@ def parse(chat_id: str, text: str) -> tuple:
                 request.append(try2)
             elif try3:
                 request.append(int(try3))
-            else:
-                request.append([])
+            # else:
+            #     request.append([])
 
         pairs = find_tag_date_pairs(request)
 

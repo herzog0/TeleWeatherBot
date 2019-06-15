@@ -168,22 +168,23 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
 
 
 def evaluate_location(msg):
-
     chat_id, message_id = get_message_id(msg)
     coords = {"lat": msg["location"]["latitude"], "lng": msg["location"]["longitude"]}
+    chat_id = str(chat_id)
 
-    if state(chat_id) is UserStateKeys.SUBSCRIBING_PLACE:
+    user_state = state(chat_id)
+
+    if user_state is UserStateKeys.SUBSCRIBING_PLACE:
         evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-    elif state(chat_id) is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
-            state(chat_id) is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+    elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
+            user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
         delete_message((chat_id, message_id))
         print("setou")
         set_alert_location(chat_id, coords)
 
     else:
-        # forecast call
-        pass
+        evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
 
 
 def set_alert_location(chat_id, location):
