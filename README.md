@@ -125,4 +125,8 @@ Subir este pacote para a função no cloud
 
 ![Segunda rodada](https://i.imgur.com/ZXSTDGb.jpg)
 
-## Deploy test
+## Deploy 2
+
+```bash
+gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
+```
