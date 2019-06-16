@@ -127,6 +127,13 @@ Subir este pacote para a função no cloud
 
 ## Deploy 2
 
+Instalar o SDK do Google a partir do seguinte comando:
+
+```bash
+curl https://sdk.cloud.google.com | bash
+```
+
+
 ```bash
 gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
 ```
