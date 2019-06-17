@@ -105,30 +105,35 @@ Em seguida, envie a mensagem:
 - Alerta de mudanças bruscas no clima.
 
 ## Arquitetura
-![Arquitetura Vai Chover Bot](https://i.imgur.com/Rt6o1zI.jpg)
+![Arquitetura Vai Chover Bot](https://i.imgur.com/EEu3XAh.png)
 
-## Deploy no Cloud (v1)
-Abra o cloud console
+## Deploy no Cloud Functions
 
-Entre no compute engine e abra a maquina vai-chover-vm por ssh
-
+Rodar o comando abaixo na pasta do projeto:
 ```bash
-cd vai_chover_bot
+make build
 ```
 
-```bash
-git fetch
-git checkout <tag da nova versão>
-```
+Um pacote .zip será gerado na pasta "package"
+
+Subir este pacote para a função no cloud
+
+
+## Brainstorm
+
+![Primeira rodada](https://i.imgur.com/snds7ff.jpg)
+
+![Segunda rodada](https://i.imgur.com/ZXSTDGb.jpg)
+
+## Deploy 2
+
+Instalar o SDK do Google a partir do seguinte comando:
 
 ```bash
-htop
+curl https://sdk.cloud.google.com | bash
 ```
 
-Ache e mate o processo da versão atual
 
 ```bash
-nohup python3 run.py &
+gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/deploy_branch/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
 ```
-
-Aperte enter para receber de volta o terminal e feche a janela.
