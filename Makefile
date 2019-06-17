@@ -47,4 +47,6 @@ remove_unused:
 zip:	
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
 
+deploy_gcloud:
+	gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/deploy_branch/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
 
