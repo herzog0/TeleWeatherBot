@@ -1,5 +1,6 @@
 import os
 
+# useless comment
 
 def _read_file(name: str) -> str:
     directory = os.path.dirname(__file__)
