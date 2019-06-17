@@ -2,3 +2,5 @@
 .*
 tests/
 package/
+!.gcloudignore
+!.gitignore
