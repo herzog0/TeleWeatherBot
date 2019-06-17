@@ -135,5 +135,5 @@ curl https://sdk.cloud.google.com | bash
 
 
 ```bash
-gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
+gcloud functions deploy tele-weather-bot   --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/deploy_branch/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
 ```
