@@ -2,3 +2,5 @@
 .*
 package/
 TOKENS_HERE.py
+env/
+venv/
