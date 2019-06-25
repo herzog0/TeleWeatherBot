@@ -1,6 +1,11 @@
 """
 O bot propriamente
 """
+import os
+import telepot
+
+from datetime import datetime, timedelta, date as date_type
+from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 from .weather import WeatherAPI, NotFoundError
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
@@ -8,25 +13,10 @@ from .alerts.notification import set_notification_type
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
-from datetime import date as date_type
 
 from .communication.send_to_user import markdown_message, delete_message, simple_message
 
-from TOKENS_HERE import OWM_TOKEN, PASSWORD
-
-import telepot
-from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
-
-from datetime import datetime, timedelta
-import tele_weather_bot.dev_functions as devfunc
-
-
-if not PASSWORD:
-    print("Password not set, dev functions not available")
-else:
-    password = PASSWORD
-
-dev_dict = {}
+from TOKENS_HERE import OWM_TOKEN
 
 
 def on_chat_message(msg):
@@ -57,34 +47,7 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
         qtype, location = parser.parse(chat_id, text)
 
         if not location:
-            if qtype is FunctionalTypes.DEV_FUNCTIONS_ON:
-                delete_message((chat_id, message_id))
-
-                if password:
-                    if chat_id in dev_dict and dev_dict[chat_id]["DEV"]:
-                        return "*Você já é developer!*"
-                    else:
-                        result = devfunc.validate_password(text, password)
-                        if result is True:
-                            return devfunc.set_dev_user(dev_dict, chat_id)
-                        return result
-
-                else:
-                    return "*Modo developer não configurado*"
-
-            elif qtype is FunctionalTypes.DEV_FUNCTIONS_OFF:
-                if password:
-                    return devfunc.set_dev_user(dev_dict, chat_id, on=False)
-                else:
-                    return "*Modo developer não configurado*"
-
-            elif qtype is FunctionalTypes.DEV_COMMANDS:
-                if password:
-                    return devfunc.list_developer_commands()
-                else:
-                    return "*Modo developer não configurado*"
-
-            elif qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
+            if qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
                 if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE or \
                         qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
                     set_alert_location(chat_id, text)
