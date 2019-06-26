@@ -1,5 +1,6 @@
 PROJECT = tele_weather_bot
 VIRTUAL_ENV = env
+SOURCE_DIR = $(shell pwd)
 
 install: virtual download_and_activate
 build: clean_package build_package_tmp zip
@@ -46,6 +47,10 @@ remove_unused:
 
 zip:	
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
+
+deploy_gcloud_without_commit:
+	@test -f .env.yaml && gcloud functions deploy tele-weather-bot --entry-point lambda_handler --source $(SOURCE_DIR) --env-vars-file .env.yaml --runtime python37 --trigger-http || echo yaml not present, deploying without it;
+	@test -f .env.yaml || gcloud functions deploy tele-weather-bot --entry-point lambda_handler --source $(SOURCE_DIR) --runtime python37 --trigger-http;
 
 deploy_gcloud_release:
 	@test -f .env.yaml && gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/ --env-vars-file .env.yaml --runtime python37 --trigger-http --entry-point lambda_handler || echo yaml not present, deploying without it; 

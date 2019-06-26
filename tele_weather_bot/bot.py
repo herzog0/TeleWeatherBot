@@ -23,19 +23,25 @@ def on_chat_message(msg):
     # - long: (content_type, msg["chat"]["type"], msg["chat"]["id"], msg["date"], msg["message_id"])
     chat_id = str(chat_id)
 
-    # apagar estados do usuário se ele ficou inativo por mais de 40 segundos
+    # apagar estados do usuário se ele ficou inativo por mais de 1 minuto
     if last_update(chat_id) and \
-            datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=40):
-        remove_key(chat_id, UserDataKeys.STATE)
+            datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=60):
+        if state(chat_id):
+            remove_key(chat_id, UserDataKeys.STATE)
+            markdown_message(chat_id, "*Cadastro interrompido, tempo limite de 1 minuto excedido (informações já "
+                                      "inseridas foram salvas)*")
+
+    response = None
 
     # If the message is a text message
     if content_type == 'text':
         response = evaluate_text(msg["text"], chat_id, message_id)
-        if isinstance(response, str):
-            markdown_message(chat_id, response)
 
     elif content_type == 'location':
-        evaluate_location(msg)
+        response = evaluate_location(msg)
+
+    if isinstance(response, str):
+        markdown_message(chat_id, response)
 
 
 def evaluate_text(text: str, chat_id: str, message_id: int):
@@ -135,6 +141,7 @@ def evaluate_location(msg):
     chat_id = str(chat_id)
 
     user_state = state(chat_id)
+    response = None
 
     if user_state is UserStateKeys.SUBSCRIBING_PLACE:
         evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
@@ -146,7 +153,10 @@ def evaluate_location(msg):
         set_alert_location(chat_id, coords)
 
     else:
-        evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
+        response = evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
+
+    if response:
+        return response
 
 
 def set_alert_location(chat_id, location):
