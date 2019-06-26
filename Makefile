@@ -47,6 +47,10 @@ remove_unused:
 zip:	
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
 
-deploy_gcloud:
+deploy_gcloud_release:
+	@test -f .env.yaml && gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/ --env-vars-file .env.yaml --runtime python37 --trigger-http --entry-point lambda_handler || echo yaml not present, deploying without it; 
+	@test -f .env.yaml || gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/ --runtime python37 --trigger-http --entry-point lambda_handler; 
+
+deploy_gcloud_testing:
 	@test -f .env.yaml && gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/develop/paths/ --env-vars-file .env.yaml --runtime python37 --trigger-http --entry-point lambda_handler || echo yaml not present, deploying without it; 
 	@test -f .env.yaml || gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/develop/paths/ --runtime python37 --trigger-http --entry-point lambda_handler; 
