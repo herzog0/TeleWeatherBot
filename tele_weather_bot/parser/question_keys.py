@@ -46,9 +46,3 @@ class FunctionalTypes(Enum):
 
     # pedido de ajuda
     HELP_REQUEST = ['/help', 'help', '/ajuda', 'ajuda', 'socorro']
-
-    DEV_FUNCTIONS_ON = ['/set_dev_functions_on']
-
-    DEV_FUNCTIONS_OFF = ['/set_dev_functions_off']
-
-    DEV_COMMANDS = ['/devhelp']
