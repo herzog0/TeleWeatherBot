@@ -16,8 +16,6 @@ from .database.userDAO import update, state, remove_key, name, email, subscribed
 
 from .communication.send_to_user import markdown_message, delete_message, simple_message
 
-from TOKENS_HERE import OWM_TOKEN
-
 
 def on_chat_message(msg):
 
@@ -67,7 +65,8 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
 
         else:
 
-            owm_api = WeatherAPI(OWM_TOKEN)
+            owm_token = os.environ.get('OWM_TOKEN', None)
+            owm_api = WeatherAPI(owm_token)
 
             full_adress = location[0]
             coords = location[1]

@@ -28,8 +28,8 @@ build_package_tmp:
 	mkdir -p ./package/tmp/
 	cp -a ./$(PROJECT) ./package/tmp/
 	cp main.py ./package/tmp/
-	cp TOKENS_HERE.py ./package/tmp/
 	cp requirements.txt ./package/tmp/
+	cp .env.yaml ./package/tmp/
 
 copy_python:
 	if test -d $(VIRTUAL_ENV)/lib; then \
@@ -48,5 +48,5 @@ zip:
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
 
 deploy_gcloud:
-	gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/  --runtime python37 --trigger-http --entry-point lambda_handler
+	gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/master/paths/ --env-vars-file .env.yaml  --runtime python37 --trigger-http --entry-point lambda_handler
 
