@@ -19,7 +19,7 @@ download_and_activate:
 		. ./$(VIRTUAL_ENV)/bin/activate; \
 		pip3 install -r requirements.txt; \
 	fi
-	@echo "Now type 'source ./env/bin/activate' then 'python3 run.py'"
+	@echo "Now type 'source ./env/bin/activate' and start coding!"
 
 clean_package:
 	rm -rf ./package/*
@@ -29,7 +29,7 @@ build_package_tmp:
 	cp -a ./$(PROJECT) ./package/tmp/
 	cp main.py ./package/tmp/
 	cp requirements.txt ./package/tmp/
-	cp .env.yaml ./package/tmp/
+	@test -f .env.yaml && cp .env.yaml ./package/tmp/ || echo yaml not present
 
 copy_python:
 	if test -d $(VIRTUAL_ENV)/lib; then \
@@ -48,5 +48,5 @@ zip:
 	cd ./package/tmp && zip -r ../$(PROJECT).zip ./
 
 deploy_gcloud:
-	gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/develop/paths/ --env-vars-file .env.yaml  --runtime python37 --trigger-http --entry-point lambda_handler
-
+	@test -f .env.yaml && gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/develop/paths/ --env-vars-file .env.yaml --runtime python37 --trigger-http --entry-point lambda_handler; 
+	@test -f .env.yaml || gcloud functions deploy tele-weather-bot --project vai-chover-bot --source https://source.developers.google.com/projects/vai-chover-bot/repos/WeatherBot/moveable-aliases/develop/paths/ --runtime python37 --trigger-http --entry-point lambda_handler; 
