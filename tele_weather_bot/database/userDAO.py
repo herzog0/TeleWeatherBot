@@ -1,21 +1,22 @@
 import firebase_admin
-import os
-import yaml
-import json
-
-from firebase_admin import credentials
+# import os
+# import yaml
+# import json
+#
+# from firebase_admin import credentials
 from firebase_admin import firestore
 from google.cloud.exceptions import NotFound
 from datetime import datetime
 
+
 from .user_keys import UserDataKeys, UserStateKeys
 
-firebase_cert = os.environ.get('FIREBASE_CERTIFICATE', None)
-firebase_cert = yaml.safe_load(firebase_cert)
-firebase_cert = json.dumps(firebase_cert)
+# firebase_cert = os.environ.get('FIREBASE_CERTIFICATE', None)
+# firebase_cert = yaml.safe_load(firebase_cert)
+# firebase_cert = json.dumps(firebase_cert)
 
-__cred = credentials.Certificate(firebase_cert)
-firebase_admin.initialize_app(__cred)
+# __cred = credentials.Certificate(firebase_cert)
+firebase_admin.initialize_app()
 
 
 def __get_value(user_chat_id: str, key: str):
