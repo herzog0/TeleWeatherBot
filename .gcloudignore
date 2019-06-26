@@ -1,8 +1,20 @@
-!main.py
-!tele_weather_bot/
-!requirements.txt
-!TOKENS_HERE.py
-*
-.*
 .gitignore
-
+Component\ Diagram.asta
+docs
+Makefile
+conf.py
+env
+package
+contributors.md
+LICENSE
+README.md
+TESTING.md
+Dockerfile
+requirements-dev.txt
+tests
+.git
+.idea
+.env.yamll
+.env.yaml
+__pycache__
+.gcloudignore

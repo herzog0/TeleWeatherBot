@@ -1,5 +1,7 @@
 *.pyc
 .*
+!.gcloudignore
+!.gitignore
 package/
 !.gcloudignore
 !.gitignore
@@ -8,3 +10,6 @@ env/
 venv/
 env_variables.yaml
 app.yaml
+.env.yaml
+.env.yamll
+__pycache__

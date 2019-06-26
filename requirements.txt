@@ -3,4 +3,3 @@ protobuf==3.8.0
 googlemaps==3.0.2
 pyowm==2.10.0
 telepot==12.7
-PyYAML==5.1.1
