@@ -23,9 +23,11 @@ class WeatherTypes(Enum):
     IS_RAINY = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
                 'chuvendo', 'molhando', 'pingando']
 
-    IS_SUNNY = ['sol']
+    SKY_COVERAGE = ['nublado', 'nuvem', 'sombra', 'céu', 'ceu']
 
-    IS_CLOUDY = ['nublado', 'nuvem', 'sombra']
+    SUNSET = ['por', 'pôr']
+
+    SUNRISE = ['nascer']
 
     # pergunta critica
     WHEN = ['quando']

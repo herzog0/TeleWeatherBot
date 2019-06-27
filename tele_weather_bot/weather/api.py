@@ -3,6 +3,7 @@
 Wrapper simples em cima do PyOWM, para simplificar as funcionalidades e reduzir os dicts de json
 """
 import os
+import dateutil.parser
 
 from pyowm import OWM
 from pyowm.weatherapi25.weather import Weather
@@ -13,7 +14,7 @@ owm_token = os.environ.get('OWM_TOKEN', None)
 __owm = None
 
 
-def get_weather(coords, date) -> Weather:
+def get_weather(coords, date=None) -> Weather:
     """
     Retorna um objeto da PyOWM, para uso interno da classe.
     Pode resultar em um NotFoundError da PyOWM também.
@@ -30,28 +31,28 @@ def get_weather(coords, date) -> Weather:
     return observation.get_weather()
 
 
-def get_weather_description(coords, date) -> str:
+def get_weather_description(coords, date=None) -> str:
     """Busca a descrição do tempo no lugar"""
     weather = get_weather(coords, date)
     status = weather.get_detailed_status()
     return status.lower()
 
 
-def get_temperature(coords, date) -> float:
+def get_temperature(coords, date=None) -> float:
     """Temperatura média no lugar"""
     weather = get_weather(coords, date)
     temp = weather.get_temperature(unit='celsius')
     return temp['temp']
 
 
-def get_temp_variation(coords, date) -> tuple:
+def get_temp_variation(coords, date=None) -> tuple:
     """Limites de temperatura no lugar"""
     weather = get_weather(coords, date)
     temp = weather.get_temperature(unit='celsius')
     return temp['temp_min'], temp['temp_max']
 
 
-def is_rainy(coords, date) -> bool:
+def is_rainy(coords, date=None) -> bool:
     """Teste se está chovendo no lugar"""
     weather = get_weather(coords, date)
 
@@ -63,3 +64,22 @@ def is_rainy(coords, date) -> bool:
         volume = sum(weather.get_rain().items())
         return volume > 0
         # pode ser trocado por `any(weather.get_rain().items())`
+
+
+def get_humidity(coords, date=None):
+    weather = get_weather(coords, date)
+    return weather.get_humidity()
+
+
+def get_clouds(coords, date=None):
+    return get_weather(coords, date).get_clouds()
+
+
+def get_sunset(coords, date=None):
+    sunset = dateutil.parser.parse(get_weather(coords, date).get_sunset_time('iso'))
+    return sunset.hour-3, sunset.minute, sunset.second
+
+
+def get_sunrise(coords, date=None):
+    sunrise = dateutil.parser.parse(get_weather(coords, date).get_sunrise_time('iso'))
+    return sunrise.hour-3, sunrise.minute, sunrise.second

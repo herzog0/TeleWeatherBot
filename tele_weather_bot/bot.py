@@ -7,7 +7,8 @@ from datetime import datetime, timedelta, date as date_type
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
 from .weather import NotFoundError
-from .weather.api import is_rainy, get_weather_description, get_temperature, get_temp_variation
+from .weather.api import is_rainy, get_weather_description, get_temperature, get_temp_variation, get_humidity, \
+    get_clouds, get_sunrise, get_sunset
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import set_notification_type
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
@@ -105,18 +106,35 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                             f'Temperatura em torno de {t_max:.1f}°C'
 
                 elif tag is WeatherTypes.HUMIDITY:
-                    markdown_message(chat_id, "eh humidade")
+                    humidity = get_humidity(coords, tag_date)
+                    response = f'Lá o ar está com {humidity}% de umidade'
 
                 elif tag is WeatherTypes.IS_RAINY:
                     rainy = is_rainy(coords, tag_date)
-                    response = f'{"Está" if rainy else "Não está"} chovendo lá.'
+                    response = f'{"Está" if rainy else "Não está"} chovendo lá'
 
-                elif tag is WeatherTypes.IS_SUNNY:
-                    markdown_message(chat_id, "eh sol")
+                elif tag is WeatherTypes.SKY_COVERAGE:
+                    cloudiness = get_clouds(coords, tag_date)
+                    response = ""
+                    if 0 <= cloudiness <= 10:
+                        response = "Céu limpo"
+                    elif 10 < cloudiness <= 30:
+                        response = "Céu predominantemente limpo"
+                    elif 30 < cloudiness <= 60:
+                        response = "Céu parcialmente nublado"
+                    elif 60 < cloudiness <= 90:
+                        response = "Céu predominantemente nublado"
+                    elif 90 < cloudiness <= 100:
+                        response = "Céu nublado"
 
-                elif tag is WeatherTypes.IS_CLOUDY:
-                    markdown_message(chat_id, "eh nuvem")
+                elif tag is WeatherTypes.SUNRISE:
+                    hour, minute, second = get_sunrise(coords, tag_date)
+                    response = f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
 
+                elif tag is WeatherTypes.SUNSET:
+                    hour, minute, second = get_sunset(coords, tag_date)
+                    response = f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
+                    
                 return response
 
     except MoreThanFiveDaysException as e:
