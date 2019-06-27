@@ -13,12 +13,11 @@ class WeatherTypes(Enum):
     WEATHER = ['clima', 'tempo', 'previsao', 'previsão', 'previa', 'provisor', 'prosa']
 
     # valores numéricos
-    TEMPERATURE = ['temperatura', 'calor', 'frio', 'quente']
+    TEMPERATURE = ['temperatura', 'calor', 'frio', 'quente', 'variacao', 'variação', 'variar']
 
     HUMIDITY = ['umidade', 'humidade', 'abafado', 'abafar']
     # limites de valores
 
-    TEMP_VARIATION = ['variacao', 'variação', 'variar']
     # testes de tempo
 
     IS_RAINY = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
