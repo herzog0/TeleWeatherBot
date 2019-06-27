@@ -1,13 +1,13 @@
 """
 O bot propriamente
 """
-import os
 import telepot
 
 from datetime import datetime, timedelta, date as date_type
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 
-from .weather import WeatherAPI, NotFoundError
+from .weather import NotFoundError
+from .weather.api import is_rainy, get_weather_description, get_temperature, get_temp_variation
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import set_notification_type
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
@@ -71,9 +71,6 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
 
         else:
 
-            owm_token = os.environ.get('OWM_TOKEN', None)
-            owm_api = WeatherAPI(owm_token)
-
             full_adress = location[0]
             coords = location[1]
             pairs = qtype
@@ -88,29 +85,30 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                 # todo incluir checagem se api openweather tá online
 
                 if tag is WeatherTypes.WEATHER:
-                    weather = owm_api.get_weather_description(coords, tag_date)
-                    temp = owm_api.get_temperature(coords, tag_date)
+                    weather = get_weather_description(coords, tag_date)
+                    temp = get_temperature(coords, tag_date)
 
                     response = f'{date_string(tag_date)}' \
                         f'{weather.capitalize()}\n' \
                         f'Temperatura atual: {temp:.1f}°C' \
 
                 elif tag is WeatherTypes.TEMPERATURE:
-                    temp = owm_api.get_temperature(coords, tag_date)
-                    t_min, t_max = owm_api.get_temp_variation(coords, tag_date)
+                    temp = get_temperature(coords, tag_date)
+                    t_min, t_max = get_temp_variation(coords, tag_date)
                     if t_min != t_max:
                         response = f'{date_string(tag_date)}' \
                             f'Temperatura mínima: {t_min:.1f}°C\n' \
                             f'Temperatura máxima: {t_max:.1f}°C\n' \
                             f'Temperatura atual: {temp:.1f}°C'
                     else:
-                        response = f'Temperatura em torno de {t_max:.1f}°C'
+                        response = f'{date_string(tag_date)}' \
+                            f'Temperatura em torno de {t_max:.1f}°C'
 
                 elif tag is WeatherTypes.HUMIDITY:
                     markdown_message(chat_id, "eh humidade")
 
                 elif tag is WeatherTypes.IS_RAINY:
-                    rainy = owm_api.is_rainy(coords, tag_date)
+                    rainy = is_rainy(coords, tag_date)
                     response = f'{"Está" if rainy else "Não está"} chovendo lá.'
 
                 elif tag is WeatherTypes.IS_SUNNY:

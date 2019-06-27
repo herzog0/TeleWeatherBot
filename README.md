@@ -111,7 +111,19 @@ Obs.[2]: o GCloud Functions interpreta que variáveis de ambiente são pouco man
  ao fazer o deploy deste arquivo uma vez, os deploys subsequentes do programa não necessitam do arquivo 
  novamente.
 
+### Padrões do projeto e reciclagem de variáveis
 
+De acordo com as informações de performance do [GCloud Docs](https://cloud.google.com/functions/docs/bestpractices/tips#functions-graceful-termination-python) 
+é recomendado que o projeto _utilize_ variáveis globais. Já que, pela natureza 
+de funcionamento das chamadas do código, variáveis globais podem 
+ser ocasionalmente salvas em cache, reduzindo o tempo de processamento 
+da função.  
+  
+A outra recomendação relacionada é que, destas variáveis globais, aquelas que 
+não precisam ser sempre executadas (por exemplo a inicialização de um objeto de API sendo que 
+a chamada da função requisita algo não relacionado à API) sejam declaradas 
+no escopo global como `var_global = None` mas que sejam inicializadas somente 
+dentro da função que a utiliza.
 
 ## Próximas funcionalidades
 
