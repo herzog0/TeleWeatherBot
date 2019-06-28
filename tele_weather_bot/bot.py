@@ -9,7 +9,7 @@ from pyowm.exceptions.api_call_error import APICallError
 
 
 from .weather import NotFoundError
-from .weather.api import is_rainy, get_weather_description, get_temperature, get_humidity, \
+from .weather.api import get_rain, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import set_notification_type
@@ -104,7 +104,7 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                     response += f'Lá o ar está com {humidity}% de umidade'
 
                 elif tag is WeatherTypes.IS_RAINY:
-                    rainy = is_rainy(coords, tag_date)
+                    rainy = get_rain(coords, tag_date)
                     response += f'{"Com" if rainy else "Sem"} chuva para este horário'
 
                 elif tag is WeatherTypes.SKY_COVERAGE:
@@ -121,11 +121,11 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                         response += "Céu nublado"
 
                 elif tag is WeatherTypes.SUNRISE:
-                    hour, minute, second = get_sunrise(coords, tag_date)
+                    hour, minute, second = get_sunrise(coords)
                     response += f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
 
                 elif tag is WeatherTypes.SUNSET:
-                    hour, minute, second = get_sunset(coords, tag_date)
+                    hour, minute, second = get_sunset(coords)
                     response += f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
                     
                 return response
