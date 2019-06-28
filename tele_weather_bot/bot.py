@@ -3,11 +3,13 @@ O bot propriamente
 """
 import telepot
 
-from datetime import datetime, timedelta, date as date_type
+from datetime import datetime, timedelta
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
+from pyowm.exceptions.api_call_error import APICallError
+
 
 from .weather import NotFoundError
-from .weather.api import is_rainy, get_weather_description, get_temperature, get_temp_variation, get_humidity, \
+from .weather.api import is_rainy, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import set_notification_type
@@ -29,8 +31,8 @@ def on_chat_message(msg):
             datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=60):
         if state(chat_id):
             remove_key(chat_id, UserDataKeys.STATE)
-            markdown_message(chat_id, "*Cadastro interrompido, tempo limite de 1 minuto excedido (informações já "
-                                      "inseridas foram salvas)*")
+            markdown_message(chat_id, "*Cadastro de informações ou alerta interrompido, tempo limite de 1 minuto "
+                                      "excedido*")
 
     response = None
 
@@ -46,7 +48,6 @@ def on_chat_message(msg):
 
 
 def evaluate_text(text: str, chat_id: str, message_id: int):
-    response = None
 
     try:
         qtype, location = parser.parse(chat_id, text)
@@ -76,77 +77,70 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
             coords = location[1]
             pairs = qtype
 
-            markdown_message(chat_id, "*Certo, encontrei este endereço:*")
-            markdown_message(chat_id, full_adress)
+            if pairs:
+                markdown_message(chat_id, "*Certo, encontrei este endereço:*")
+                markdown_message(chat_id, full_adress)
+            else:
+                raise NotFoundError("Nenhuma interpretação pôde ser feita")
 
             for pair in pairs:
                 tag = pair[0]
                 tag_date = pair[1]
-
-                # todo incluir checagem se api openweather tá online
+                response = f'{date_string(tag_date)}'
 
                 if tag is WeatherTypes.WEATHER:
                     weather = get_weather_description(coords, tag_date)
                     temp = get_temperature(coords, tag_date)
 
-                    response = f'{date_string(tag_date)}' \
-                        f'{weather.capitalize()}\n' \
-                        f'Temperatura atual: {temp:.1f}°C' \
+                    response += f'{weather.capitalize()}\n' \
+                        f'Temperatura no horário pedido: {temp:.1f}°C'
 
                 elif tag is WeatherTypes.TEMPERATURE:
                     temp = get_temperature(coords, tag_date)
-                    t_min, t_max = get_temp_variation(coords, tag_date)
-                    if t_min != t_max:
-                        response = f'{date_string(tag_date)}' \
-                            f'Temperatura mínima: {t_min:.1f}°C\n' \
-                            f'Temperatura máxima: {t_max:.1f}°C\n' \
-                            f'Temperatura atual: {temp:.1f}°C'
-                    else:
-                        response = f'{date_string(tag_date)}' \
-                            f'Temperatura em torno de {t_max:.1f}°C'
+                    response += f'Temperatura no horário pedido: {temp:.1f}°C'
 
                 elif tag is WeatherTypes.HUMIDITY:
                     humidity = get_humidity(coords, tag_date)
-                    response = f'Lá o ar está com {humidity}% de umidade'
+                    response += f'Lá o ar está com {humidity}% de umidade'
 
                 elif tag is WeatherTypes.IS_RAINY:
                     rainy = is_rainy(coords, tag_date)
-                    response = f'{"Está" if rainy else "Não está"} chovendo lá'
+                    response += f'{"Com" if rainy else "Sem"} chuva para este horário'
 
                 elif tag is WeatherTypes.SKY_COVERAGE:
                     cloudiness = get_clouds(coords, tag_date)
-                    response = ""
                     if 0 <= cloudiness <= 10:
-                        response = "Céu limpo"
+                        response += "Céu limpo"
                     elif 10 < cloudiness <= 30:
-                        response = "Céu predominantemente limpo"
+                        response += "Céu predominantemente limpo"
                     elif 30 < cloudiness <= 60:
-                        response = "Céu parcialmente nublado"
+                        response += "Céu parcialmente nublado"
                     elif 60 < cloudiness <= 90:
-                        response = "Céu predominantemente nublado"
+                        response += "Céu predominantemente nublado"
                     elif 90 < cloudiness <= 100:
-                        response = "Céu nublado"
+                        response += "Céu nublado"
 
                 elif tag is WeatherTypes.SUNRISE:
                     hour, minute, second = get_sunrise(coords, tag_date)
-                    response = f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
+                    response += f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
 
                 elif tag is WeatherTypes.SUNSET:
                     hour, minute, second = get_sunset(coords, tag_date)
-                    response = f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
+                    response += f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
                     
                 return response
-
+    except APICallError:
+        return '*Parece que a base de dados de tempo está offline, tente novamente em algum tempo*'
     except MoreThanFiveDaysException as e:
         return f'{str(e)}'
     except AssertionError:
-        return '*Infelizmente não reconheci o nome do local :(*'
+        return '*Infelizmente não entendi o que você falou :(*'
     except CouldNotUnderstandException as e:
         return f'{str(e)}'
     except ValueError as e:
         return f'{str(e)}'
     except NotFoundError:
-        return '*Infelizmente não reconheci o nome da cidade :(*'
+        return '*Infelizmente não entendi o que você falou :(*'
     except LocationNotFoundException as e:
         return str(e)
 
@@ -239,13 +233,9 @@ def on_callback_query(callback_query):
             eval(options.get(str(value), "None"))
 
 
-def date_string(date: date_type, time_set: datetime.hour = None):
-    if time_set:
-        return str(f'{date.day}/{date.month}/{date.year} às {time_set}'
-                   f'\n*----------------------*\n')
-    else:
-        return str(f'{date.day}/{date.month}/{date.year}'
-                   f'\n*----------------------*\n')
+def date_string(date: datetime):
+    return str(f'{date.day}/{date.month}/{date.year} às {(date.hour-3)%24}h'
+               f'\n*----------------------*\n')
 
 
 def get_message_id(msg):

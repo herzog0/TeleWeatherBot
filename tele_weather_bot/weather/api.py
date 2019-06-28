@@ -4,10 +4,11 @@ Wrapper simples em cima do PyOWM, para simplificar as funcionalidades e reduzir 
 """
 import os
 import dateutil.parser
+from datetime import datetime, timedelta
 
 from pyowm import OWM
 from pyowm.weatherapi25.weather import Weather
-
+from pyowm.exceptions.api_call_error import APICallError
 
 owm_token = os.environ.get('OWM_TOKEN', None)
 
@@ -27,8 +28,17 @@ def get_weather(coords, date=None) -> Weather:
             # essa configuração acima muda a linguagem para 'pt' e
             # adiciona um cache simples pra tentar reduzir os requests
         )
-    observation = __owm.weather_at_coords(coords['lat'], coords['lng'])
-    return observation.get_weather()
+
+    if not __owm.is_API_online():
+        raise APICallError
+
+    if date and (date - datetime.now()) > timedelta(hours=3):
+        fc = __owm.three_hours_forecast_at_coords(coords['lat'], coords['lng'])
+        observation = fc.get_weather_at(date)
+    else:
+        observation = __owm.weather_at_coords(coords['lat'], coords['lng']).get_weather()
+
+    return observation
 
 
 def get_weather_description(coords, date=None) -> str:
@@ -43,13 +53,6 @@ def get_temperature(coords, date=None) -> float:
     weather = get_weather(coords, date)
     temp = weather.get_temperature(unit='celsius')
     return temp['temp']
-
-
-def get_temp_variation(coords, date=None) -> tuple:
-    """Limites de temperatura no lugar"""
-    weather = get_weather(coords, date)
-    temp = weather.get_temperature(unit='celsius')
-    return temp['temp_min'], temp['temp_max']
 
 
 def is_rainy(coords, date=None) -> bool:

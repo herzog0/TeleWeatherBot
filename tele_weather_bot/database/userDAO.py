@@ -25,7 +25,6 @@ def __get_value(user_chat_id: str, key: str):
                 response = item
         return response
     except KeyError:
-        print(f"Key {key} doesn't exist to the {user_chat_id} document")
         return None
 
 

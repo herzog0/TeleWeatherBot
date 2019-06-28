@@ -20,7 +20,7 @@ def week_days():
             {4: ['sexta', 'sext', 'sxt', 'sex']},
             {5: ['sábado', 'sabado', 'sbdo', 'sabdo', 'sab', 'sbd']},
             {6: ['domingo', 'dmg', 'dom', 'doming', 'dmingo', 'dming']},
-            {(datetime.datetime.now().weekday() + 1) % 7: ['amanha', 'amanhã', 'amnh', 'amnha', 'amnhã']},
+            {(datetime.datetime.now().weekday() + 1) % 7: ['amanha', 'amanhã', 'amnh', 'amnha', 'amnhã', 'amanhas']},
             {datetime.datetime.now().weekday(): ['haja', 'hoje', 'agora', 'hj', 'hoj', 'oge', 'oje']}]
 
 
@@ -120,7 +120,7 @@ def find_tag_date_pairs(requests: list):
             last_was_tag = False
 
         elif isinstance(request, int) and not last_was_tag:
-            pairs[-1][1] = pairs[-1][1].replace(hour=request)
+            pairs[-1][1] = pairs[-1][1].replace(hour=(request+3) % 24)
 
     if isinstance(requests[-1], WeatherTypes):
         pairs.append((requests[-1], datetime.datetime.now()))
