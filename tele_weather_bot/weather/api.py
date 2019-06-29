@@ -55,7 +55,7 @@ def get_temperature(coords, date=None) -> float:
     return temp['temp']
 
 
-def is_rainy(coords, date=None) -> bool:
+def get_rain(coords, date=None) -> bool:
     """Teste se está chovendo no lugar"""
     weather = get_weather(coords, date)
 
@@ -78,11 +78,11 @@ def get_clouds(coords, date=None):
     return get_weather(coords, date).get_clouds()
 
 
-def get_sunset(coords, date=None):
-    sunset = dateutil.parser.parse(get_weather(coords, date).get_sunset_time('iso'))
+def get_sunset(coords):
+    sunset = dateutil.parser.parse(get_weather(coords).get_sunset_time('iso'))
     return sunset.hour-3, sunset.minute, sunset.second
 
 
-def get_sunrise(coords, date=None):
-    sunrise = dateutil.parser.parse(get_weather(coords, date).get_sunrise_time('iso'))
+def get_sunrise(coords):
+    sunrise = dateutil.parser.parse(get_weather(coords).get_sunrise_time('iso'))
     return sunrise.hour-3, sunrise.minute, sunrise.second
