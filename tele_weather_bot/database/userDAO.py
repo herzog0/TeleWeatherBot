@@ -4,7 +4,11 @@ from google.cloud.exceptions import NotFound
 from datetime import datetime
 
 from .user_keys import UserDataKeys, UserStateKeys
-firebase_admin.initialize_app()
+
+try:
+    firebase_admin.initialize_app()
+except ValueError:
+    pass
 
 __users = None
 

@@ -12,7 +12,7 @@ from .weather import NotFoundError
 from .weather.api import get_rain, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
-from .alerts.notification import set_notification_type
+from .alerts.notification import set_notification_type, set_notification_location
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
@@ -159,8 +159,7 @@ def evaluate_location(msg):
     elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
             user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
         delete_message((chat_id, message_id))
-        print("setou")
-        set_alert_location(chat_id, coords)
+        set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
     else:
         response = evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
@@ -184,13 +183,14 @@ def set_alert_location(chat_id, location):
         markdown_message(chat_id, f"""
 Certo, o local configurado para receber notificações é:
 *{address}*
-Envie *ok* para confirmar ou um uma outra localização para corrigir esta. 
 """)
+        remove_key(chat_id, UserDataKeys.STATE)
     except LocationNotFoundException:
         markdown_message(chat_id, "Insira um local válido")
 
 
 def on_callback_query(callback_query):
+    print("entering callback query")
     query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
 
     # Build message identification
@@ -201,16 +201,17 @@ def on_callback_query(callback_query):
     if query_data.split('.')[0] == 'notification':
 
         info = query_data.split('.')
-        values = [0]
+        value = 0
         if info[1] == 'type':
 
             if info[2] == 'daily':
                 update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE)
-                values = [1]
+                update(chat_id, UserDataKeys.ALERT, {"DAILY": 20})
+                value = 1
 
             elif info[2] == 'trigger':
                 update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE)
-                values = [2]
+                value = 2
 
         elif info[1] == 'set':
 
@@ -219,18 +220,14 @@ def on_callback_query(callback_query):
 
             elif info[2] == 'go_back':
                 remove_key(chat_id, UserDataKeys.STATE)
-                values = [5]
+                value = 5
 
-        options = {
-            "1": "Notification.set_notification_location(message_id)",
-            "2": "Notification.set_notification_location(message_id, by_trigger=True)",
-            "3": "",
-            "4": "",
-            "5": "Notification.set_notification_type(message_id, query_id)",
-        }
-
-        for value in values:
-            eval(options.get(str(value), "None"))
+        if value == 1:
+            set_notification_location(message_id)
+        elif value == 2:
+            set_notification_location(message_id, by_trigger=True)
+        elif value == 5:
+            set_notification_type(message_id, query_id)
 
 
 def date_string(date: datetime):
@@ -378,4 +375,4 @@ def receiver(data):
             update_type = key
 
     # Call correct handler passing correct values
-    update_types[update_type](data[update_type])
+    return update_types[update_type](data[update_type])

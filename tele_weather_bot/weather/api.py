@@ -79,10 +79,10 @@ def get_clouds(coords, date=None):
 
 
 def get_sunset(coords):
-    sunset = dateutil.parser.parse(get_weather(coords, date).get_sunset_time('iso'))
+    sunset = dateutil.parser.parse(get_weather(coords).get_sunset_time('iso'))
     return sunset.hour-3, sunset.minute, sunset.second
 
 
 def get_sunrise(coords):
-    sunrise = dateutil.parser.parse(get_weather(coords, date).get_sunrise_time('iso'))
+    sunrise = dateutil.parser.parse(get_weather(coords).get_sunrise_time('iso'))
     return sunrise.hour-3, sunrise.minute, sunrise.second

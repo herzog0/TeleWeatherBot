@@ -33,3 +33,5 @@ class UserDataKeys(Enum):
     STATE = "state"
 
     LAST_UPDATE = "last_update"
+
+    ALERT = "ALERT"
