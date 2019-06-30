@@ -18,3 +18,4 @@ tests
 .env.yaml
 __pycache__
 .gcloudignore
+schedular_alert.py
