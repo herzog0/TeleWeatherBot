@@ -119,38 +119,39 @@ def get_forecast_info(key, coords):
             lt = False
 
         value = key.get("VALUE", None)
+        value = int(value)
 
         if flavor == "temperature":
             data_min, m_time, data_max, mx_time = find_range(fc, "temperature")
             if lt and value >= data_min:
                 triggered = True
-                info += f"avisar quando a temperatura for ficar abaixo de {lt:.1f}°C\n"
+                info += f"avisar quando a temperatura for ficar abaixo de {value:.1f}°C\n"
                 info += f"A temperatura será de *{data_min:.1f}°C* às *{m_time.hour}h*"
             elif gt and value <= data_max:
                 triggered = True
-                info += f"avisar quando a temperatura for ficar acima de {gt:.1f}°C\n"
+                info += f"avisar quando a temperatura for ficar acima de {value:.1f}°C\n"
                 info += f"A temperatura será de *{data_max:.1f}°C* às *{mx_time.hour}h*"
 
         elif flavor == "clouds":
             data_min, m_time, data_max, mx_time = find_range(fc, "clouds")
             if lt and value >= data_min:
                 triggered = True
-                info += f"avisar quando a cobertura do céu for ficar abaixo de {lt:.1f}%\n"
+                info += f"avisar quando a cobertura do céu for ficar abaixo de {value:.1f}%\n"
                 info += f"O céu ficará *{data_min:.0f}%* coberto às *{m_time.hour}h*"
             elif gt and value <= data_max:
                 triggered = True
-                info += f"avisar quando a cobertura do céu for ficar acima de {gt:.1f}%\n"
+                info += f"avisar quando a cobertura do céu for ficar acima de {value:.1f}%\n"
                 info += f"O céu ficará *{data_max:.0f}%* coberto às *{mx_time.hour}h*"
 
         elif flavor == "humidity":
             data_min, m_time, data_max, mx_time = find_range(fc, "humidity")
             if lt and value >= data_min:
                 triggered = True
-                info += f"avisar quando a umidade do ar for ficar abaixo de {lt:.1f}%\n"
+                info += f"avisar quando a umidade do ar for ficar abaixo de {value:.1f}%\n"
                 info += f"A umidade será de *{data_min:.0f}%* às *{m_time.hour}h*"
             elif gt and value <= data_max:
                 triggered = True
-                info += f"avisar quando a umidade do ar for ficar acima de {gt:.1f}%\n"
+                info += f"avisar quando a umidade do ar for ficar acima de {value:.1f}%\n"
                 info += f"A umidade será de *{data_max:.0f}%* às *{mx_time.hour}h*"
 
         elif flavor == "rain":
