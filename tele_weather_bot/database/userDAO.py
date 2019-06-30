@@ -4,7 +4,11 @@ from google.cloud.exceptions import NotFound
 from datetime import datetime
 
 from .user_keys import UserDataKeys, UserStateKeys
-firebase_admin.initialize_app()
+
+try:
+    firebase_admin.initialize_app()
+except ValueError:
+    pass
 
 __users = None
 
@@ -25,7 +29,6 @@ def __get_value(user_chat_id: str, key: str):
                 response = item
         return response
     except KeyError:
-        print(f"Key {key} doesn't exist to the {user_chat_id} document")
         return None
 
 
@@ -77,14 +80,33 @@ def state(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.STATE.value)
 
 
-def update(user_chat_id: str, key: UserDataKeys, value):
+def has_trigger(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: return true if user has subscribed a trigger
+    """
+    alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    return True if alert.get("TRIGGER", None) else False
+
+
+def has_daily_alert(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: return true if user has subscribed a daily alert
+    """
+    alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    return True if alert.get("TRIGGER", None) else False
+
+
+def trigger_flavor(user_chat_id: str):
+    return __get_value(user_chat_id, "ALERT.TRIGGER.FLAVOR")
+
+
+def update(user_chat_id: str, args_dict):
     """
     :param user_chat_id: chat_id talking to the bot
 
-    :param key: user information key to be created/updated,
-    keys are enum objects from :attr:`~.user_keys`
-
-    :param value: value to be written in the user key field
+    :param args_dict: dictionary with information to be updated
 
     :return: None
 
@@ -99,25 +121,29 @@ def update(user_chat_id: str, key: UserDataKeys, value):
     This makes a cleaner and less error susceptible code.
 
     """
+    update_dict = {}
+    for key, value in args_dict.items():
+        if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
+            if not (not isinstance(value, dict) or ("lat" in value and "lng" in value)):
+                raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
+        if isinstance(value, UserStateKeys) or isinstance(value, UserDataKeys):
+            value = value.value
+        if isinstance(key, UserStateKeys) or isinstance(key, UserDataKeys):
+            key = key.value
 
-    if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
-        if not (isinstance(value, dict) or ("lat" in value and "lng" in value)):
-            raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
+        update_dict.update({key: value})
 
-    if isinstance(value, UserStateKeys):
-        value = value.value
+    update_dict.update({UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
 
     global __users
     if not __users:
         __users = firestore.client().collection(u'users')
 
     try:
-        __users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
+        __users.document(user_chat_id).update(update_dict)
     except NotFound:
         __users.document(user_chat_id).set({})
-        __users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
+        __users.document(user_chat_id).update(update_dict)
 
 
 def remove_key(user_chat_id: str, key: UserDataKeys):
@@ -138,5 +164,6 @@ def remove_key(user_chat_id: str, key: UserDataKeys):
         __users.document(user_chat_id).update({
             key.value: firestore.firestore.DELETE_FIELD
         })
+        return True
     except NotFound:
         return None
