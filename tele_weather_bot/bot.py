@@ -27,10 +27,10 @@ def on_chat_message(msg):
     # - long: (content_type, msg["chat"]["type"], msg["chat"]["id"], msg["date"], msg["message_id"])
     chat_id = str(chat_id)
 
+    l_upd = last_update(chat_id)
     # apagar estados do usuário se ele ficou inativo por mais de 3 minutos
-    if last_update(chat_id) and \
-            datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=180):
-        if state(chat_id):
+    if state(chat_id):
+        if l_upd and datetime.now() - datetime.fromtimestamp(float(l_upd)) >= timedelta(seconds=180):
             remove_key(chat_id, UserDataKeys.STATE)
             markdown_message(chat_id, "*Cadastro de informações ou de alerta interrompido, tempo limite de 3 minutos "
                                       "excedido*")
@@ -61,13 +61,19 @@ def set_not_rain_trigger(chat_id, text, flavor):
         if not 0 <= value <= 100:
             raise ValueError('Envie um valor entre 0 e 100 para porcentagens')
         if flavor == 'clouds':
-            update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "clouds", UserDataKeys.WEATHER_ALERT_VALUE: value})
+            update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
+            markdown_message(chat_id, f"Gatilho configurado para {value}%")
+            remove_key(chat_id, UserDataKeys.STATE)
         elif flavor == 'humid':
-            update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "humidity", UserDataKeys.WEATHER_ALERT_VALUE: value})
+            update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
+            markdown_message(chat_id, f"Gatilho configurado para {value}%")
+            remove_key(chat_id, UserDataKeys.STATE)
     else:
         if not -20 <= value <= 50:
             raise ValueError('Envie um valor entre -20 e 50 para temperatura')
-        update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "temperature", UserDataKeys.WEATHER_ALERT_VALUE: value})
+        update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
+        markdown_message(chat_id, f"Gatilho configurado para {value}°C")
+        remove_key(chat_id, UserDataKeys.STATE)
 
 
 def evaluate_text(text: str, chat_id: str, message_id: int):
@@ -78,10 +84,23 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
         if not location:
 
             if qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
-                if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE or \
-                        qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
+                if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
                     if set_alert_location(chat_id, text):
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
+                        markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
+                                                  "diariamente")
+                elif qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
+                    if set_alert_location(chat_id, text):
+                        remove_key(chat_id, UserDataKeys.STATE)
                         set_notification_triggers((chat_id, message_id))
+                elif qtype is UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE:
+                    set_not_rain_trigger(chat_id, text, flavor='temp')
+                elif qtype is UserStateKeys.EXPECTING_TRIGGER_CLOUDS:
+                    set_not_rain_trigger(chat_id, text, flavor='clouds')
+                elif qtype is UserStateKeys.EXPECTING_TRIGGER_HUMID:
+                    set_not_rain_trigger(chat_id, text, flavor='humid')
+                elif qtype is UserStateKeys.EXPECTING_DAILY_HOUR:
+                    set_daily_alert_time(chat_id, text)
                 else:
                     evaluate_subscription(chat_id, text)
 
@@ -99,13 +118,6 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
             elif qtype is FunctionalTypes.CANCEL:
                 if remove_key(chat_id, UserDataKeys.STATE):
                     markdown_message(chat_id, "*Processo cancelado*")
-
-            elif qtype is UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE:
-                set_not_rain_trigger(chat_id, text, flavor='temp')
-            elif qtype is UserStateKeys.EXPECTING_TRIGGER_CLOUDS:
-                set_not_rain_trigger(chat_id, text, flavor='clouds')
-            elif qtype is UserStateKeys.EXPECTING_TRIGGER_HUMID:
-                set_not_rain_trigger(chat_id, text, flavor='humid')
 
         else:
 
@@ -181,6 +193,18 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
         return str(e)
 
 
+def set_daily_alert_time(chat_id, text):
+    try:
+        text = text.split('h')[0]
+        hour = int(text)
+        if not 0 <= hour <= 23:
+            raise ValueError
+    except ValueError:
+        raise ValueError("Você deve inserir um horário como um número entre 0h e 23h.")
+
+    update(chat_id, {UserDataKeys.WEATHER_DAILY_ALERT: hour})
+    markdown_message(chat_id, f"*Alerta diário configurado*: você receberá um resumo das 24h seguintes às {hour}h")
+
 def evaluate_location(msg):
     chat_id, message_id = get_message_id(msg)
     coords = {"lat": msg["location"]["latitude"], "lng": msg["location"]["longitude"]}
@@ -192,11 +216,17 @@ def evaluate_location(msg):
     if user_state is UserStateKeys.SUBSCRIBING_PLACE:
         evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
 
-    elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
-            user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+    elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
         delete_message((chat_id, message_id))
         if set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}'):
+            remove_key(chat_id, UserDataKeys.STATE)
             set_notification_triggers((chat_id, message_id))
+    elif user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+        delete_message((chat_id, message_id))
+        if set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}'):
+            update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
+            markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
+                                      "diariamente")
 
     else:
         response = evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
@@ -221,7 +251,6 @@ def set_alert_location(chat_id, location):
 Certo, o local configurado para receber notificações é:
 *{address}*
 """)
-        remove_key(chat_id, UserDataKeys.STATE)
         return True
     except LocationNotFoundException:
         markdown_message(chat_id, "Insira um local válido")
@@ -229,7 +258,6 @@ Certo, o local configurado para receber notificações é:
 
 
 def on_callback_query(callback_query):
-    print("entering callback query")
     query_id, from_id, query_data = telepot.glance(callback_query, flavor='callback_query')
 
     # Build message identification
@@ -254,6 +282,13 @@ def on_callback_query(callback_query):
 
             if info[2] == 'use_subscribed_place':
                 set_alert_location(chat_id, subscribed_coords(chat_id))
+                if state(chat_id) is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+                    update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
+                    markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
+                                              "diariamente")
+                else:
+                    remove_key(chat_id, UserDataKeys.STATE)
+                    set_notification_triggers(message_id)
 
             elif info[2] == 'go_back':
                 remove_key(chat_id, UserDataKeys.STATE)
@@ -306,9 +341,11 @@ def on_callback_query(callback_query):
                     if info[3] == 'rain':
                         update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'rain'})
                         markdown_message(chat_id, "Gatilho configurado, você saberá quando for chover")
+                        remove_key(chat_id, UserDataKeys.STATE)
                     elif info[3] == 'not_rain':
                         update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'not_rain'})
                         markdown_message(chat_id, "Gatilho configurado, você saberá quando *não* for chover")
+                        remove_key(chat_id, UserDataKeys.STATE)
 
 
 def date_string(date: datetime):
@@ -392,7 +429,6 @@ def start(chat_id):
 
 
 def evaluate_subscription(chat_id, text):
-    chat_id = chat_id
     if not state(chat_id):
         update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_NAME})
         markdown_message(chat_id, '*Qual seu nome?*')

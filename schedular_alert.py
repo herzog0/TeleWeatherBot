@@ -64,7 +64,7 @@ def get_users_with_alerts():
                 if "DAILY" in user_alert:
                     hour = user_alert["DAILY"]
                     if (hour+3) % 24 == datetime.utcnow().hour:
-                        forecast_info = get_forecast_info("all", user["notfication_coords"])
+                        forecast_info = get_forecast_info("all", user["notification_coords"])
                         send_message(chat_id, forecast_info)
                 if "TRIGGER" in user_alert:
                     # user_alert["TRIGGER"] deve ser um dicionário contendo o pedido de trigger, uma chave para:

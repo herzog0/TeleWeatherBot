@@ -23,13 +23,13 @@ def set_notification_type(message_id, query_id=False):
     else:
         chat_id = message_id
         
-    if has_trigger(chat_id):
-        trigger_notf = unsubs_trigger
-    
-    if has_daily_alert(chat_id):
-        daily_notf = unsubs_daily
-        
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[daily_notf, trigger_notf])
+    # if has_trigger(chat_id):
+    #     trigger_notf = unsubs_trigger
+    #
+    # if has_daily_alert(chat_id):
+    #     daily_notf = unsubs_daily
+    #
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[[daily_notf], [trigger_notf]])
 
     if query_id:
         edit_message(message_id, choose_type, keyboard)
@@ -40,9 +40,10 @@ def set_notification_type(message_id, query_id=False):
 
 def set_notification_location(message_id, by_trigger=False):
     place = subscribed_coords(str(message_id[0]))
+#     msg_edit = f"""
+# {"*Atenção*: você já possui um alerta por gatilho configurado! Ao cadastrar outro, o primeiro será desconsiderado."
+#     if (by_trigger and has_trigger(message_id[0])) else ""}
     msg_edit = f"""
-{"*Atenção*: você já possui um alerta por gatilho configurado! Ao cadastrar outro, o primeiro será desconsiderado." 
-    if (by_trigger and has_trigger(message_id[0])) else ""}
 *Certo!*
 Você escolheu receber notificações {'por gatilho' if by_trigger else 'diárias'} sobre o clima de *algum* local.
 Nos diga uma localização sobre a qual você deseja receber notícias.
@@ -113,16 +114,17 @@ Baseado nisto, escolha se deseja disparar o gatilho quando for ou quando *não* 
 """
 
     kbd = [
-        InlineKeyboardButton(text='Menor que',
-                             callback_data='notification.set.trig_cond.lt'),
-        InlineKeyboardButton(text='Maior que',
-                             callback_data='notification.set.trig_cond.gt')]
+        [InlineKeyboardButton(text='Menor que',
+                              callback_data='notification.set.trig_cond.lt')],
+        [InlineKeyboardButton(text='Maior que',
+                              callback_data='notification.set.trig_cond.gt')]
+    ]
 
     rain_kbd = [
-        InlineKeyboardButton(text='Quando chover',
-                             callback_data='notification.set.trig_cond.rain'),
-        InlineKeyboardButton(text='Quando não chover',
-                             callback_data='notification.set.trig_cond.not_rain')
+        [InlineKeyboardButton(text='Quando chover',
+                              callback_data='notification.set.trig_cond.rain')],
+        [InlineKeyboardButton(text='Quando não chover',
+                              callback_data='notification.set.trig_cond.not_rain')]
     ]
 
     if is_rain:
@@ -131,7 +133,7 @@ Baseado nisto, escolha se deseja disparar o gatilho quando for ou quando *não* 
 
     msg = prefix + msg
 
-    keyboard = InlineKeyboardMarkup(keyboard=kbd)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=kbd)
 
     if len(message_id) > 1:
         edit_message(message_id, msg, keyboard)

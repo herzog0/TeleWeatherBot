@@ -124,12 +124,14 @@ def update(user_chat_id: str, args_dict):
     update_dict = {}
     for key, value in args_dict.items():
         if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
-            if not (isinstance(value, dict) or ("lat" in value and "lng" in value)):
+            if not (not isinstance(value, dict) or ("lat" in value and "lng" in value)):
                 raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
-        if isinstance(value, UserStateKeys):
+        if isinstance(value, UserStateKeys) or isinstance(value, UserDataKeys):
             value = value.value
+        if isinstance(key, UserStateKeys) or isinstance(key, UserDataKeys):
+            key = key.value
 
-        update_dict.update({key, value})
+        update_dict.update({key: value})
 
     update_dict.update({UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
 
