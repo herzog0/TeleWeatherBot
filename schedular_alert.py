@@ -66,12 +66,12 @@ def get_users_with_alerts():
                     if (hour+3) % 24 == datetime.utcnow().hour:
                         forecast_info = get_forecast_info("all", user["notfication_coords"])
                         send_message(chat_id, forecast_info)
-                elif "TRIGGER" in user_alert:
+                if "TRIGGER" in user_alert:
                     # user_alert["TRIGGER"] deve ser um dicionário contendo o pedido de trigger, uma chave para:
                     # saber se a pessoa quer o gatilho para um valor menor ou maior que o estipulado
                     # o valor estipulado
-                    # formato: {"weather_rqst": "temp/cloud/humid", "less_than": int/float / "greather_than": int/float}
-                    #          {"weather_rqst": "rain", "cond": "yes"/"no"}
+                    # formato: {"weather_rqst": "temp/cloud/humid", "less_than": int/float / "greater_than": int/float}
+                    #          {"weather_rqst": "rain", "cond": "true"/"false"}
                     forecast_info = get_forecast_info(user_alert["TRIGGER"], user["notfication_coords"])
                     if forecast_info:
                         send_message(chat_id, forecast_info)
@@ -80,7 +80,6 @@ def get_users_with_alerts():
 
 
 def get_forecast_info(key, coords):
-
     fc = __owm.three_hours_forecast_at_coords(coords['lat'], coords['lng'])
     fc = fc.get_forecast().get_weathers()[:8]
 
@@ -88,18 +87,19 @@ def get_forecast_info(key, coords):
 
         data_min, m_time, data_max, mx_time = find_range(fc, "temperature")
         info = f"Temperatura *mínima* de {data_min:.1f}°C às {m_time.hour}h e *máxima* de {data_max:.1f}°C às {mx_time.hour}h\n"
-        temp_now = __owm.weather_at_coords(coords['lat'], coords['lng']).get_weather().get_temperature('celsius')["temp"]
+        temp_now = __owm.weather_at_coords(coords['lat'], coords['lng']).get_weather().get_temperature('celsius')[
+            "temp"]
         info += f"Temperatura *agora* {temp_now:.1f}°C\n"
 
         data_min, m_time, data_max, mx_time = find_range(fc, "clouds")
         info += f"Cobertura *mínima* do céu por nuvens de {data_min}% às {m_time.hour}h e *máxima* de {data_max}% às {mx_time.hour}h\n"
-        
+
         data_min, m_time, data_max, mx_time = find_range(fc, "humidity")
         info += f"Umidade *mínima* de {data_min}% às {m_time.hour}h e *máxima* de {data_max}% às {mx_time.hour}h\n"
 
         rain, rm_time = find_range(fc, "rain")
         info += f'{f"Terá *chuva* às {rm_time.hour}" if rain else "Não choverá hoje"}'
-        
+
         return info
 
     elif isinstance(key, dict):
@@ -114,41 +114,41 @@ def get_forecast_info(key, coords):
         if weather_rqst == "temperature":
             data_min, m_time, data_max, mx_time = find_range(fc, "temperature")
             lt = key.get("less_than", None)
-            gt = key.get("greather_than", None)
+            gt = key.get("greater_than", None)
             if lt and lt >= data_min:
                 triggered = True
                 info += f"avisar quando a temperatura for ficar abaixo de {lt:.1f}°C\n"
-                info += f"A temperatura será de *{data_min}°C* às *{m_time.hour}h*"
+                info += f"A temperatura será de *{data_min:.1f}°C* às *{m_time.hour}h*"
             elif gt and gt <= data_max:
                 triggered = True
                 info += f"avisar quando a temperatura for ficar acima de {gt:.1f}°C\n"
-                info += f"A temperatura será de *{data_max}°C* às *{mx_time.hour}h*"
+                info += f"A temperatura será de *{data_max:.1f}°C* às *{mx_time.hour}h*"
 
         elif weather_rqst == "clouds":
             data_min, m_time, data_max, mx_time = find_range(fc, "clouds")
             lt = key.get("less_than", None)
-            gt = key.get("greather_than", None)
+            gt = key.get("greater_than", None)
             if lt and lt >= data_min:
                 triggered = True
                 info += f"avisar quando a cobertura do céu for ficar abaixo de {lt:.1f}%\n"
-                info += f"O céu ficará *{data_min}%* coberto às *{m_time.hour}h*"
+                info += f"O céu ficará *{data_min:.0f}%* coberto às *{m_time.hour}h*"
             elif gt and gt <= data_max:
                 triggered = True
                 info += f"avisar quando a cobertura do céu for ficar acima de {gt:.1f}%\n"
-                info += f"O céu ficará *{data_max}%* coberto às *{mx_time.hour}h*"
+                info += f"O céu ficará *{data_max:.0f}%* coberto às *{mx_time.hour}h*"
 
         elif weather_rqst == "humidity":
             data_min, m_time, data_max, mx_time = find_range(fc, "humidity")
             lt = key.get("less_than", None)
-            gt = key.get("greather_than", None)
+            gt = key.get("greater_than", None)
             if lt and lt >= data_min:
                 triggered = True
                 info += f"avisar quando a umidade do ar for ficar abaixo de {lt:.1f}%\n"
-                info += f"A umidade será de *{data_min}%* às *{m_time.hour}h*"
+                info += f"A umidade será de *{data_min:.0f}%* às *{m_time.hour}h*"
             elif gt and gt <= data_max:
                 triggered = True
                 info += f"avisar quando a umidade do ar for ficar acima de {gt:.1f}%\n"
-                info += f"A umidade será de *{data_max}%* às *{mx_time.hour}h*"
+                info += f"A umidade será de *{data_max:.0f}%* às *{mx_time.hour}h*"
 
         elif weather_rqst == "rain":
             rain, rm_time = find_range(fc, "rain")
@@ -157,7 +157,7 @@ def get_forecast_info(key, coords):
                 triggered = True
                 info += f"avisar se irá chover\n"
                 info += f"Terá *chuva* às {rm_time.hour}"
-            elif rain and cond and cond == "false":
+            elif not rain and cond and cond == "false":
                 triggered = True
                 info += f"avisar se *não* irá chover\n"
                 info += f"Não choverá nas próximas horas"

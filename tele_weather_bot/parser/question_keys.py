@@ -47,3 +47,6 @@ class FunctionalTypes(Enum):
 
     # pedido de ajuda
     HELP_REQUEST = ['/help', 'help', '/ajuda', 'ajuda', 'socorro']
+
+    # cancelar envio de localização para cadastro
+    CANCEL = ['cancelar', 'cancel', '/cancelar']

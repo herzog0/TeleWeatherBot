@@ -12,7 +12,8 @@ from .weather import NotFoundError
 from .weather.api import get_rain, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
 from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
-from .alerts.notification import set_notification_type, set_notification_location
+from .alerts.notification import set_notification_type, set_notification_location, set_trigger_condition, \
+    set_notification_triggers
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
@@ -26,12 +27,12 @@ def on_chat_message(msg):
     # - long: (content_type, msg["chat"]["type"], msg["chat"]["id"], msg["date"], msg["message_id"])
     chat_id = str(chat_id)
 
-    # apagar estados do usuário se ele ficou inativo por mais de 1 minuto
+    # apagar estados do usuário se ele ficou inativo por mais de 3 minutos
     if last_update(chat_id) and \
-            datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=60):
+            datetime.now() - datetime.fromtimestamp(float(last_update(chat_id))) >= timedelta(seconds=180):
         if state(chat_id):
             remove_key(chat_id, UserDataKeys.STATE)
-            markdown_message(chat_id, "*Cadastro de informações ou alerta interrompido, tempo limite de 1 minuto "
+            markdown_message(chat_id, "*Cadastro de informações ou de alerta interrompido, tempo limite de 3 minutos "
                                       "excedido*")
 
     response = None
@@ -47,16 +48,40 @@ def on_chat_message(msg):
         markdown_message(chat_id, response)
 
 
+def set_trigger(chat_id, text, flavor):
+    temp = (flavor == 'temp')
+    try:
+        if not temp:
+            text = text.split('%')[0]
+        value = int(text)
+    except ValueError:
+        raise ValueError(f"{'Envie um valor entre -20 e 50 para temperatura' if temp else 'Envie um valor entre 0 e 100 para porcentagens'}")
+
+    if not temp:
+        if not 0 <= value <= 100:
+            raise ValueError('Envie um valor entre 0 e 100 para porcentagens')
+        if flavor == 'clouds':
+            update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "clouds", UserDataKeys.WEATHER_ALERT_VALUE: value})
+        elif flavor == 'humid':
+            update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "humidity", UserDataKeys.WEATHER_ALERT_VALUE: value})
+    else:
+        if not -20 <= value <= 50:
+            raise ValueError('Envie um valor entre -20 e 50 para temperatura')
+        update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "temperature", UserDataKeys.WEATHER_ALERT_VALUE: value})
+
+
 def evaluate_text(text: str, chat_id: str, message_id: int):
 
     try:
         qtype, location = parser.parse(chat_id, text)
 
         if not location:
+
             if qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
                 if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE or \
                         qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
-                    set_alert_location(chat_id, text)
+                    if set_alert_location(chat_id, text):
+                        set_notification_triggers((chat_id, message_id))
                 else:
                     evaluate_subscription(chat_id, text)
 
@@ -70,6 +95,17 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
 
             elif qtype is FunctionalTypes.SET_ALARM:
                 set_notification_type((chat_id, message_id))
+
+            elif qtype is FunctionalTypes.CANCEL:
+                if remove_key(chat_id, UserDataKeys.STATE):
+                    markdown_message(chat_id, "*Processo cancelado*")
+
+            elif qtype is UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE:
+                set_trigger(chat_id, text, flavor='temp')
+            elif qtype is UserStateKeys.EXPECTING_TRIGGER_CLOUDS:
+                set_trigger(chat_id, text, flavor='clouds')
+            elif qtype is UserStateKeys.EXPECTING_TRIGGER_HUMID:
+                set_trigger(chat_id, text, flavor='humid')
 
         else:
 
@@ -159,7 +195,8 @@ def evaluate_location(msg):
     elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE or \
             user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
         delete_message((chat_id, message_id))
-        set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}')
+        if set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}'):
+            set_notification_triggers((chat_id, message_id))
 
     else:
         response = evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
@@ -179,14 +216,16 @@ def set_alert_location(chat_id, location):
     """
     try:
         address, coords = get_user_address_by_name(location)
-        update(chat_id, UserDataKeys.NOTIFICATION_COORDS, coords)
+        update(chat_id, {UserDataKeys.NOTIFICATION_COORDS: coords})
         markdown_message(chat_id, f"""
 Certo, o local configurado para receber notificações é:
 *{address}*
 """)
         remove_key(chat_id, UserDataKeys.STATE)
+        return True
     except LocationNotFoundException:
         markdown_message(chat_id, "Insira um local válido")
+        return False
 
 
 def on_callback_query(callback_query):
@@ -201,17 +240,15 @@ def on_callback_query(callback_query):
     if query_data.split('.')[0] == 'notification':
 
         info = query_data.split('.')
-        value = 0
         if info[1] == 'type':
 
             if info[2] == 'daily':
-                update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE)
-                update(chat_id, UserDataKeys.ALERT, {"DAILY": 20})
-                value = 1
+                update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE})
+                set_notification_location(message_id)
 
             elif info[2] == 'trigger':
-                update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE)
-                value = 2
+                update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE})
+                set_notification_location(message_id, by_trigger=True)
 
         elif info[1] == 'set':
 
@@ -220,14 +257,12 @@ def on_callback_query(callback_query):
 
             elif info[2] == 'go_back':
                 remove_key(chat_id, UserDataKeys.STATE)
-                value = 5
+                set_notification_type(message_id, query_id)
 
-        if value == 1:
-            set_notification_location(message_id)
-        elif value == 2:
-            set_notification_location(message_id, by_trigger=True)
-        elif value == 5:
-            set_notification_type(message_id, query_id)
+            elif info[2] == 'trig_flavor':
+                # if info[3] == 'temperature' or info[3] == 'clouds' or info[3] == 'humidity':
+                # todo terminar aqui
+                pass
 
 
 def date_string(date: datetime):
@@ -313,24 +348,24 @@ def start(chat_id):
 def evaluate_subscription(chat_id, text):
     chat_id = chat_id
     if not state(chat_id):
-        update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_NAME)
+        update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_NAME})
         markdown_message(chat_id, '*Qual seu nome?*')
 
     elif state(chat_id) is UserStateKeys.SUBSCRIBING_NAME:
-        update(chat_id, UserDataKeys.NAME, text)
-        update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_EMAIL)
+        update(chat_id, {UserDataKeys.NAME: text})
+        update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_EMAIL})
         markdown_message(chat_id, '*Qual seu e-mail?*')
 
     elif state(chat_id) is UserStateKeys.SUBSCRIBING_EMAIL:
-        update(chat_id, UserDataKeys.EMAIL, text)
-        update(chat_id, UserDataKeys.STATE, UserStateKeys.SUBSCRIBING_PLACE)
+        update(chat_id, {UserDataKeys.EMAIL: text})
+        update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_PLACE})
         markdown_message(chat_id, '*Qual o seu lugar de cadastro?*\n(Envie um nome ou uma localização')
 
     elif state(chat_id) is UserStateKeys.SUBSCRIBING_PLACE:
         address = None
         try:
             address, coords = get_user_address_by_name(text)
-            update(chat_id, UserDataKeys.SUBSCRIBED_COORDS, coords)
+            update(chat_id, {UserDataKeys.SUBSCRIBED_COORDS: coords})
         except LocationNotFoundException as e:
             remove_key(chat_id, UserDataKeys.SUBSCRIBED_COORDS)
             markdown_message(chat_id, f'*{str(e)}*')
