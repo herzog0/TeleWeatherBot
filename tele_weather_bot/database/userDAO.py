@@ -98,15 +98,15 @@ def has_daily_alert(user_chat_id: str):
     return True if alert.get("TRIGGER", None) else False
 
 
+def trigger_flavor(user_chat_id: str):
+    return __get_value(user_chat_id, "ALERT.TRIGGER.FLAVOR")
+
+
 def update(user_chat_id: str, args_dict):
-    # key: UserDataKeys, value
     """
     :param user_chat_id: chat_id talking to the bot
 
-    :param key: user information key to be created/updated,
-    keys are enum objects from :attr:`~.user_keys`
-
-    :param value: value to be written in the user key field
+    :param args_dict: dictionary with information to be updated
 
     :return: None
 

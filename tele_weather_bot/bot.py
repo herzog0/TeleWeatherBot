@@ -16,7 +16,7 @@ from .alerts.notification import set_notification_type, set_notification_locatio
     set_notification_triggers
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
-from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update
+from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update, trigger_flavor
 
 from .communication.send_to_user import markdown_message, delete_message, simple_message
 
@@ -48,7 +48,7 @@ def on_chat_message(msg):
         markdown_message(chat_id, response)
 
 
-def set_trigger(chat_id, text, flavor):
+def set_not_rain_trigger(chat_id, text, flavor):
     temp = (flavor == 'temp')
     try:
         if not temp:
@@ -101,11 +101,11 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                     markdown_message(chat_id, "*Processo cancelado*")
 
             elif qtype is UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE:
-                set_trigger(chat_id, text, flavor='temp')
+                set_not_rain_trigger(chat_id, text, flavor='temp')
             elif qtype is UserStateKeys.EXPECTING_TRIGGER_CLOUDS:
-                set_trigger(chat_id, text, flavor='clouds')
+                set_not_rain_trigger(chat_id, text, flavor='clouds')
             elif qtype is UserStateKeys.EXPECTING_TRIGGER_HUMID:
-                set_trigger(chat_id, text, flavor='humid')
+                set_not_rain_trigger(chat_id, text, flavor='humid')
 
         else:
 
@@ -260,9 +260,55 @@ def on_callback_query(callback_query):
                 set_notification_type(message_id, query_id)
 
             elif info[2] == 'trig_flavor':
-                # if info[3] == 'temperature' or info[3] == 'clouds' or info[3] == 'humidity':
-                # todo terminar aqui
-                pass
+                if info[3] == 'temperature':
+                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "temperature"})
+                    set_trigger_condition(message_id)
+                elif info[3] == 'clouds':
+                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "clouds"})
+                    set_trigger_condition(message_id)
+                elif info[3] == 'humidity':
+                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "humidity"})
+                    set_trigger_condition(message_id)
+                elif info[3] == 'rain':
+                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "rain"})
+                    set_trigger_condition(message_id, is_rain=True)
+
+            elif info[2] == 'trig_cond':
+                flavor = trigger_flavor(chat_id)
+                if flavor == 'temperature':
+                    if info[3] == 'lt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
+                    elif info[3] == 'gt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
+                    markdown_message(chat_id, "Envie um valor entre -20 e 50 para temperatura")
+
+                elif flavor == 'clouds':
+                    if info[3] == 'lt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_CLOUDS,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
+                    elif info[3] == 'gt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_CLOUDS,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
+                    markdown_message(chat_id, "Envie um valor entre 0 e 100 para porcentagens")
+
+                elif flavor == 'humidity':
+                    if info[3] == 'lt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_HUMID,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
+                    elif info[3] == 'gt':
+                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_HUMID,
+                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
+                    markdown_message(chat_id, "Envie um valor entre 0 e 100 para porcentagens")
+
+                elif flavor == 'rain':
+                    if info[3] == 'rain':
+                        update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'rain'})
+                        markdown_message(chat_id, "Gatilho configurado, você saberá quando for chover")
+                    elif info[3] == 'not_rain':
+                        update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'not_rain'})
+                        markdown_message(chat_id, "Gatilho configurado, você saberá quando *não* for chover")
 
 
 def date_string(date: datetime):

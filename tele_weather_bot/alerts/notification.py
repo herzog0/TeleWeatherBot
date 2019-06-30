@@ -134,7 +134,7 @@ Baseado nisto, escolha se deseja disparar o gatilho quando for ou quando *não* 
     keyboard = InlineKeyboardMarkup(keyboard=kbd)
 
     if len(message_id) > 1:
-        chat_id = message_id[0]
+        edit_message(message_id, msg, keyboard)
     else:
         chat_id = message_id
-    inline_keyboard_message(chat_id, msg, keyboard)
+        inline_keyboard_message(chat_id, msg, keyboard)
