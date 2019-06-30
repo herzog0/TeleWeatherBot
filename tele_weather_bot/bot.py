@@ -205,6 +205,7 @@ def set_daily_alert_time(chat_id, text):
     update(chat_id, {UserDataKeys.WEATHER_DAILY_ALERT: hour})
     markdown_message(chat_id, f"*Alerta diário configurado*: você receberá um resumo das 24h seguintes às {hour}h")
 
+
 def evaluate_location(msg):
     chat_id, message_id = get_message_id(msg)
     coords = {"lat": msg["location"]["latitude"], "lng": msg["location"]["longitude"]}
