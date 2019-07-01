@@ -1,2 +1,4 @@
-tests:
-        - python3 test_parser.py
+test:
+  stage: test
+  script:
+    - python3 test_parser.py
