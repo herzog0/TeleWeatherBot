@@ -22,7 +22,7 @@ def get_user_address_by_name(loc_name):
         __geoloc = googlemaps.Client(key=os.environ.get('GOOGLEMAPS_TOKEN', None))
 
     if isinstance(loc_name, dict):
-        loc_name = f'{loc_name["lat"]} {loc_name["lng"]}'
+        loc_name = f"{loc_name['lat']} {loc_name['lng']}"
     loc = geocode(__geoloc, loc_name)
 
     if not loc:
