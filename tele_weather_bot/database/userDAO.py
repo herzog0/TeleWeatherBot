@@ -5,12 +5,14 @@ from datetime import datetime
 
 from .user_keys import UserDataKeys, UserStateKeys
 
-try:
-    firebase_admin.initialize_app()
-except ValueError:
-    pass
-
 __users = None
+
+
+def initialize_firebase():
+    try:
+        firebase_admin.initialize_app()
+    except ValueError:
+        pass
 
 
 def __get_value(user_chat_id: str, key: str):
@@ -19,6 +21,7 @@ def __get_value(user_chat_id: str, key: str):
     :param key: retrieve value from this key, or key path
     :return: retrieved value or None
     """
+    initialize_firebase()
     try:
         global __users
         if not __users:
@@ -121,6 +124,7 @@ def update(user_chat_id: str, args_dict):
     This makes a cleaner and less error susceptible code.
 
     """
+    initialize_firebase()
     update_dict = {}
     for key, value in args_dict.items():
         if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
@@ -156,7 +160,7 @@ def remove_key(user_chat_id: str, key: UserDataKeys):
     Use it whenever a field is not going to be used anymore. Don't keep None values in the database fields.
 
     """
-
+    initialize_firebase()
     try:
         global __users
         if not __users:

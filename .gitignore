@@ -1,8 +1,9 @@
 *.pyc
 .*
+package/
 !.gcloudignore
 !.gitignore
-package/
+!.gitlab-ci.yml
 TOKENS_HERE.py
 env/
 venv/
