@@ -57,7 +57,7 @@ class TestParser(unittest.TestCase):
             with patch('tele_weather_bot.google_maps.geocode_functions.geocode') as geo_mock:
                 geo_mock.return_value = [
                     {
-                        "formatted_address": f"campinas_test",
+                        "formatted_address": "campinas_test",
                         "geometry": {
                             "location": {
                                 "lat": "lat mock", "lng": "lng mock"
