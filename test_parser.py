@@ -1,10 +1,8 @@
-from tele_weather_bot.google_maps.geocode_functions import geocode, googlemaps
-from tele_weather_bot.parser.parser import find_hour, find_date, find_request_type, parse, MoreThanFiveDaysException, \
-    week_days, find_tag_date_pairs, address
+from tele_weather_bot.parser.parser import find_hour, find_date, MoreThanFiveDaysException, week_days, \
+    find_tag_date_pairs
 from datetime import datetime, timedelta
 from tele_weather_bot.parser.question_keys import WeatherTypes
 import unittest
-from unittest.mock import patch
 
 
 class TestParser(unittest.TestCase):
