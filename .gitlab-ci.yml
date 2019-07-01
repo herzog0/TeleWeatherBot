@@ -1,0 +1,2 @@
+tests:
+        - python3 test_parser.py
