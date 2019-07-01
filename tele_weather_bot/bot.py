@@ -204,6 +204,7 @@ def set_daily_alert_time(chat_id, text):
         raise ValueError("Você deve inserir um horário como um número entre 0h e 23h.")
 
     update(chat_id, {UserDataKeys.WEATHER_DAILY_ALERT: hour})
+    remove_key(chat_id, UserDataKeys.STATE)
     markdown_message(chat_id, f"*Alerta diário configurado*: você receberá um resumo das 24h seguintes às {hour}h")
 
 
@@ -288,12 +289,14 @@ def on_callback_query(callback_query):
                 remove_key(chat_id, UserDataKeys.WEATHER_DAILY_ALERT)
                 if not has_alerts(chat_id):
                     remove_key(chat_id, UserDataKeys.ALERT)
+                    remove_key(chat_id, UserDataKeys.NOTIFICATION_COORDS)
                 set_notification_type(message_id, query_id, un_daily=True)
 
             elif info[2] == 'trigger':
                 remove_key(chat_id, UserDataKeys.WEATHER_TRIGGER_ALERT)
                 if not has_alerts(chat_id):
                     remove_key(chat_id, UserDataKeys.ALERT)
+                    remove_key(chat_id, UserDataKeys.NOTIFICATION_COORDS)
                 set_notification_type(message_id, query_id, un_trig=True)
 
         elif info[1] == 'set':
