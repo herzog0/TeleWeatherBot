@@ -16,9 +16,10 @@ from .alerts.notification import set_notification_type, set_notification_locatio
     set_notification_triggers
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
-from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update, trigger_flavor
+from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update, trigger_flavor, \
+    has_alerts
 
-from .communication.send_to_user import markdown_message, delete_message, simple_message
+from .communication.send_to_user import markdown_message, delete_message, simple_message, answer_callback_query
 
 
 def on_chat_message(msg):
@@ -265,6 +266,8 @@ def on_callback_query(callback_query):
     message_id = get_message_id(callback_query)
     chat_id = str(message_id[0])
 
+    query_id = str(query_id)
+
     # Navigate the callback if it came from the notifications setter
     if query_data.split('.')[0] == 'notification':
 
@@ -273,11 +276,25 @@ def on_callback_query(callback_query):
 
             if info[2] == 'daily':
                 update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE})
-                set_notification_location(message_id)
+                set_notification_location(message_id, query_id)
 
             elif info[2] == 'trigger':
                 update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE})
-                set_notification_location(message_id, by_trigger=True)
+                set_notification_location(message_id, query_id, by_trigger=True)
+
+        elif info[1] == 'unsubscribe':
+
+            if info[2] == 'daily':
+                remove_key(chat_id, UserDataKeys.WEATHER_DAILY_ALERT)
+                if not has_alerts(chat_id):
+                    remove_key(chat_id, UserDataKeys.ALERT)
+                set_notification_type(message_id, query_id, un_daily=True)
+
+            elif info[2] == 'trigger':
+                remove_key(chat_id, UserDataKeys.WEATHER_TRIGGER_ALERT)
+                if not has_alerts(chat_id):
+                    remove_key(chat_id, UserDataKeys.ALERT)
+                set_notification_type(message_id, query_id, un_trig=True)
 
         elif info[1] == 'set':
 
@@ -289,7 +306,8 @@ def on_callback_query(callback_query):
                                               "diariamente")
                 else:
                     remove_key(chat_id, UserDataKeys.STATE)
-                    set_notification_triggers(message_id)
+                    set_notification_triggers(message_id, query_id)
+                answer_callback_query(query_id)
 
             elif info[2] == 'go_back':
                 remove_key(chat_id, UserDataKeys.STATE)
@@ -298,16 +316,16 @@ def on_callback_query(callback_query):
             elif info[2] == 'trig_flavor':
                 if info[3] == 'temperature':
                     update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "temperature"})
-                    set_trigger_condition(message_id)
+                    set_trigger_condition(message_id, query_id)
                 elif info[3] == 'clouds':
                     update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "clouds"})
-                    set_trigger_condition(message_id)
+                    set_trigger_condition(message_id, query_id)
                 elif info[3] == 'humidity':
                     update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "humidity"})
-                    set_trigger_condition(message_id)
+                    set_trigger_condition(message_id, query_id)
                 elif info[3] == 'rain':
                     update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "rain"})
-                    set_trigger_condition(message_id, is_rain=True)
+                    set_trigger_condition(message_id, query_id, is_rain=True)
 
             elif info[2] == 'trig_cond':
                 flavor = trigger_flavor(chat_id)
@@ -349,6 +367,7 @@ def on_callback_query(callback_query):
                         remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
                         markdown_message(chat_id, "Gatilho configurado, você saberá quando *não* for chover")
                         remove_key(chat_id, UserDataKeys.STATE)
+                answer_callback_query(query_id)
 
 
 def date_string(date: datetime):
@@ -359,8 +378,9 @@ def date_string(date: datetime):
 def get_message_id(msg):
     try:
         message_id = telepot.message_identifier(msg)
+        message_id[0] = str(message_id[0])
     except ValueError:
-        message_id = (msg["message"]["chat"]["id"], msg["message"]["message_id"])
+        message_id = (str(msg["message"]["chat"]["id"]), msg["message"]["message_id"])
 
     return message_id
 
