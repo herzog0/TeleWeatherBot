@@ -1,16 +1,16 @@
 import firebase_admin
-
-from firebase_admin import credentials
 from firebase_admin import firestore
 from google.cloud.exceptions import NotFound
 from datetime import datetime
 
 from .user_keys import UserDataKeys, UserStateKeys
 
-from TOKENS_HERE import FIREBASE_CERTIFICATE
+try:
+    firebase_admin.initialize_app()
+except ValueError:
+    pass
 
-__cred = credentials.Certificate(FIREBASE_CERTIFICATE)
-firebase_admin.initialize_app(__cred)
+__users = None
 
 
 def __get_value(user_chat_id: str, key: str):
@@ -20,14 +20,15 @@ def __get_value(user_chat_id: str, key: str):
     :return: retrieved value or None
     """
     try:
-        users = firestore.client().collection(u'users')
-        response = users.document(user_chat_id).get().get(key)
+        global __users
+        if not __users:
+            __users = firestore.client().collection(u'users')
+        response = __users.document(user_chat_id).get().get(key)
         for item in UserStateKeys:
             if response == item.value:
                 response = item
         return response
     except KeyError:
-        print(f"Key {key} doesn't exist to the {user_chat_id} document")
         return None
 
 
@@ -79,14 +80,33 @@ def state(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.STATE.value)
 
 
-def update(user_chat_id: str, key: UserDataKeys, value):
+def has_trigger(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: return true if user has subscribed a trigger
+    """
+    alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    return True if alert.get("TRIGGER", None) else False
+
+
+def has_daily_alert(user_chat_id: str):
+    """
+    :param user_chat_id: chat_id talking to the bot
+    :return: return true if user has subscribed a daily alert
+    """
+    alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    return True if alert.get("TRIGGER", None) else False
+
+
+def trigger_flavor(user_chat_id: str):
+    return __get_value(user_chat_id, "ALERT.TRIGGER.FLAVOR")
+
+
+def update(user_chat_id: str, args_dict):
     """
     :param user_chat_id: chat_id talking to the bot
 
-    :param key: user information key to be created/updated,
-    keys are enum objects from :attr:`~.user_keys`
-
-    :param value: value to be written in the user key field
+    :param args_dict: dictionary with information to be updated
 
     :return: None
 
@@ -101,23 +121,29 @@ def update(user_chat_id: str, key: UserDataKeys, value):
     This makes a cleaner and less error susceptible code.
 
     """
+    update_dict = {}
+    for key, value in args_dict.items():
+        if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
+            if not (not isinstance(value, dict) or ("lat" in value and "lng" in value)):
+                raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
+        if isinstance(value, UserStateKeys) or isinstance(value, UserDataKeys):
+            value = value.value
+        if isinstance(key, UserStateKeys) or isinstance(key, UserDataKeys):
+            key = key.value
 
-    if key is UserDataKeys.SUBSCRIBED_COORDS or key is UserDataKeys.NOTIFICATION_COORDS:
-        if not (isinstance(value, dict) or ("lat" in value and "lng" in value)):
-            raise TypeError("Coordinates should have a {'lat': <value>, 'lng': <value>} value structure")
+        update_dict.update({key: value})
 
-    if isinstance(value, UserStateKeys):
-        value = value.value
+    update_dict.update({UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
 
-    users = firestore.client().collection(u'users')
+    global __users
+    if not __users:
+        __users = firestore.client().collection(u'users')
 
     try:
-        users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
+        __users.document(user_chat_id).update(update_dict)
     except NotFound:
-        users.document(user_chat_id).set({})
-        users.document(user_chat_id).update(
-            {key.value: value, UserDataKeys.LAST_UPDATE.value: datetime.now().timestamp()})
+        __users.document(user_chat_id).set({})
+        __users.document(user_chat_id).update(update_dict)
 
 
 def remove_key(user_chat_id: str, key: UserDataKeys):
@@ -132,9 +158,12 @@ def remove_key(user_chat_id: str, key: UserDataKeys):
     """
 
     try:
-        users = firestore.client().collection(u'users')
-        users.document(user_chat_id).update({
+        global __users
+        if not __users:
+            __users = firestore.client().collection(u'users')
+        __users.document(user_chat_id).update({
             key.value: firestore.firestore.DELETE_FIELD
         })
+        return True
     except NotFound:
         return None

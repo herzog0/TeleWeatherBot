@@ -13,20 +13,21 @@ class WeatherTypes(Enum):
     WEATHER = ['clima', 'tempo', 'previsao', 'previsão', 'previa', 'provisor', 'prosa']
 
     # valores numéricos
-    TEMPERATURE = ['temperatura', 'calor', 'frio', 'quente']
+    TEMPERATURE = ['temperatura', 'calor', 'frio', 'quente', 'variacao', 'variação', 'variar']
 
     HUMIDITY = ['umidade', 'humidade', 'abafado', 'abafar']
     # limites de valores
 
-    TEMP_VARIATION = ['variacao', 'variação', 'variar']
     # testes de tempo
 
     IS_RAINY = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
                 'chuvendo', 'molhando', 'pingando']
 
-    IS_SUNNY = ['sol']
+    SKY_COVERAGE = ['nublado', 'nuvem', 'sombra', 'céu', 'ceu']
 
-    IS_CLOUDY = ['nublado', 'nuvem', 'sombra']
+    SUNSET = ['por', 'pôr']
+
+    SUNRISE = ['nascer']
 
     # pergunta critica
     WHEN = ['quando']
@@ -47,8 +48,5 @@ class FunctionalTypes(Enum):
     # pedido de ajuda
     HELP_REQUEST = ['/help', 'help', '/ajuda', 'ajuda', 'socorro']
 
-    DEV_FUNCTIONS_ON = ['/set_dev_functions_on']
-
-    DEV_FUNCTIONS_OFF = ['/set_dev_functions_off']
-
-    DEV_COMMANDS = ['/devhelp']
+    # cancelar envio de localização para cadastro
+    CANCEL = ['cancelar', 'cancel', '/cancelar']

@@ -38,8 +38,10 @@ def lambda_handler(event, context=None):
         payload = event.get_json()
     else:
         payload = None
-
-    if payload:
-        return respond(None, operations['POST'](payload))
-    else:
+    try:
+        if payload:
+            return respond(None, operations['POST'](payload))
+        else:
+            return respond(ValueError("Didn't understand a thing!"))
+    except Exception:
         return respond(ValueError("Didn't understand a thing!"))
