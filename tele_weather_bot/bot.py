@@ -341,10 +341,12 @@ def on_callback_query(callback_query):
                 elif flavor == 'rain':
                     if info[3] == 'rain':
                         update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'rain'})
+                        remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
                         markdown_message(chat_id, "Gatilho configurado, você saberá quando for chover")
                         remove_key(chat_id, UserDataKeys.STATE)
                     elif info[3] == 'not_rain':
                         update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'not_rain'})
+                        remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
                         markdown_message(chat_id, "Gatilho configurado, você saberá quando *não* for chover")
                         remove_key(chat_id, UserDataKeys.STATE)
 
