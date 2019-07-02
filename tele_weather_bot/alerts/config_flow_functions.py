@@ -1,6 +1,7 @@
 from tele_weather_bot.database.userDAO import update, remove_key
 from tele_weather_bot.database.user_keys import UserDataKeys
 from tele_weather_bot.communication.send_to_user import markdown_message
+from tele_weather_bot.google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 
 
 def set_not_rain_trigger(chat_id, text, flavor):

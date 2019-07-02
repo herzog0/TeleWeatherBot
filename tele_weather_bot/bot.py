@@ -147,6 +147,9 @@ def not_weather_rqst(text: str, chat_id: str, message_id: int, qtype):
 
     key_fn = {
         'SET_SUBSCRIPTION': set_subscription,
+        'SUBSCRIBING_NAME': set_subscription,
+        'SUBSCRIBING_EMAIL': set_subscription,
+        'SUBSCRIBING_PLACE': set_subscription,
         'SUBSCRIBING_DAILY_ALERT_PLACE': subscribing_daily_alert_place,
         'SUBSCRIBING_TRIGGER_ALERT_PLACE': subscribing_trigger_alert_place,
         'EXPECTING_TRIGGER_TEMPERATURE': expecting_trigger_temperature,
@@ -225,7 +228,7 @@ def weather_rqst(chat_id: str, qtype, location):
         tag = pair[0]
         tag_date = pair[1]
         response = f'{date_string(tag_date)}'
-        response += key_weather_fn[tag.name]
+        response += key_weather_fn[tag.name]()
         markdown_message(chat_id, response)
 
 
@@ -342,19 +345,16 @@ def on_callback_query(callback_query):
                 answer_callback_query(query_id)
 
 
+def get_message_id(msg):
+    try:
+        return telepot.message_identifier(msg)
+    except ValueError:
+        return msg["message"]["chat"]["id"], msg["message"]["message_id"]
+
+
 def date_string(date: datetime):
     return str(f'{date.day}/{date.month}/{date.year} às {(date.hour-3)%24}h'
                f'\n*----------------------*\n')
-
-
-def get_message_id(msg):
-    try:
-        message_id = telepot.message_identifier(msg)
-        message_id[0] = str(message_id[0])
-    except ValueError:
-        message_id = (str(msg["message"]["chat"]["id"]), msg["message"]["message_id"])
-
-    return message_id
 
 
 def evaluate_subscription(chat_id, text):
