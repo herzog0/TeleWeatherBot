@@ -4,14 +4,14 @@ O bot propriamente
 import telepot
 
 from datetime import datetime, timedelta
-from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 from pyowm.exceptions.api_call_error import APICallError
 
-
+from tele_weather_bot.alerts.config_flow_functions import set_not_rain_trigger, set_daily_alert_time, set_alert_location
+from tele_weather_bot.trivials.trivial_commands import call_help, start
 from .weather import NotFoundError
 from .weather.api import get_rain, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
-from .parser import parser, WeatherTypes, FunctionalTypes, CouldNotUnderstandException, MoreThanFiveDaysException
+from .parser import parser, CouldNotUnderstandException, MoreThanFiveDaysException
 from .alerts.notification import set_notification_type, set_notification_location, set_trigger_condition, \
     set_notification_triggers
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
@@ -19,7 +19,35 @@ from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update, trigger_flavor, \
     has_alerts
 
-from .communication.send_to_user import markdown_message, delete_message, simple_message, answer_callback_query
+from .communication.send_to_user import markdown_message, answer_callback_query
+
+
+def receiver(data):
+    """Receives data from Lambda
+    """
+
+    # Handlers
+    update_types = {
+        'message': on_chat_message,
+        # 'edited_message': _edited_message,
+        # 'channel_post': _channel_post,
+        # 'edited_channel_post': _edited_channel_post,
+        # 'inline_query': _inline_query,
+        # 'chosen_inline_result': _chosen_inline_result,
+        'callback_query': on_callback_query
+    }
+
+    update_type = 0
+
+    # Get update info
+    for key in data:
+        if key == 'update_id':
+            pass
+        else:
+            update_type = key
+
+    # Call correct handler passing correct values
+    return update_types[update_type](data[update_type])
 
 
 def on_chat_message(msg):
@@ -49,32 +77,9 @@ def on_chat_message(msg):
         markdown_message(chat_id, response)
 
 
-def set_not_rain_trigger(chat_id, text, flavor):
-    temp = (flavor == 'temp')
-    try:
-        if not temp:
-            text = text.split('%')[0]
-        value = int(text)
-    except ValueError:
-        raise ValueError(f"{'Envie um valor entre -20 e 50 para temperatura' if temp else 'Envie um valor entre 0 e 100 para porcentagens'}")
-
-    if not temp:
-        if not 0 <= value <= 100:
-            raise ValueError('Envie um valor entre 0 e 100 para porcentagens')
-        if flavor == 'clouds':
-            update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
-            markdown_message(chat_id, f"Gatilho configurado para {value}%")
-            remove_key(chat_id, UserDataKeys.STATE)
-        elif flavor == 'humid':
-            update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
-            markdown_message(chat_id, f"Gatilho configurado para {value}%")
-            remove_key(chat_id, UserDataKeys.STATE)
-    else:
-        if not -20 <= value <= 50:
-            raise ValueError('Envie um valor entre -20 e 50 para temperatura')
-        update(chat_id, {UserDataKeys.WEATHER_ALERT_VALUE: str(value)})
-        markdown_message(chat_id, f"Gatilho configurado para {value}°C")
-        remove_key(chat_id, UserDataKeys.STATE)
+def evaluate_location(msg):
+    chat_id, message_id = get_message_id(msg)
+    return evaluate_text(str(msg["location"]["latitude"]) + " " + str(msg["location"]["longitude"]), chat_id, message_id)
 
 
 def evaluate_text(text: str, chat_id: str, message_id: int):
@@ -83,101 +88,9 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
         qtype, location = parser.parse(chat_id, text)
 
         if not location:
-
-            if qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
-                if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
-                    if set_alert_location(chat_id, text):
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
-                        markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
-                                                  "diariamente")
-                elif qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
-                    if set_alert_location(chat_id, text):
-                        remove_key(chat_id, UserDataKeys.STATE)
-                        set_notification_triggers((chat_id, message_id))
-                elif qtype is UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE:
-                    set_not_rain_trigger(chat_id, text, flavor='temp')
-                elif qtype is UserStateKeys.EXPECTING_TRIGGER_CLOUDS:
-                    set_not_rain_trigger(chat_id, text, flavor='clouds')
-                elif qtype is UserStateKeys.EXPECTING_TRIGGER_HUMID:
-                    set_not_rain_trigger(chat_id, text, flavor='humid')
-                elif qtype is UserStateKeys.EXPECTING_DAILY_HOUR:
-                    set_daily_alert_time(chat_id, text)
-                else:
-                    evaluate_subscription(chat_id, text)
-
-            elif qtype is FunctionalTypes.INITIAL_MESSAGE:
-                #
-                start(chat_id)
-
-            elif qtype is FunctionalTypes.HELP_REQUEST:
-                #
-                call_help(chat_id, text)
-
-            elif qtype is FunctionalTypes.SET_ALARM:
-                set_notification_type((chat_id, message_id))
-
-            elif qtype is FunctionalTypes.CANCEL:
-                if remove_key(chat_id, UserDataKeys.STATE):
-                    markdown_message(chat_id, "*Processo cancelado*")
-
+            not_weather_rqst(text, chat_id, message_id, qtype)
         else:
-
-            full_adress = location[0]
-            coords = location[1]
-            pairs = qtype
-
-            if pairs:
-                markdown_message(chat_id, "*Certo, encontrei este endereço:*")
-                markdown_message(chat_id, full_adress)
-            else:
-                raise NotFoundError("Nenhuma interpretação pôde ser feita")
-
-            for pair in pairs:
-                tag = pair[0]
-                tag_date = pair[1]
-                response = f'{date_string(tag_date)}'
-
-                if tag is WeatherTypes.WEATHER:
-                    weather = get_weather_description(coords, tag_date)
-                    temp = get_temperature(coords, tag_date)
-
-                    response += f'{weather.capitalize()}\n' \
-                        f'Temperatura no horário pedido: {temp:.1f}°C'
-
-                elif tag is WeatherTypes.TEMPERATURE:
-                    temp = get_temperature(coords, tag_date)
-                    response += f'Temperatura no horário pedido: {temp:.1f}°C'
-
-                elif tag is WeatherTypes.HUMIDITY:
-                    humidity = get_humidity(coords, tag_date)
-                    response += f'Lá o ar está com {humidity}% de umidade'
-
-                elif tag is WeatherTypes.IS_RAINY:
-                    rainy = get_rain(coords, tag_date)
-                    response += f'{"Com" if rainy else "Sem"} chuva para este horário'
-
-                elif tag is WeatherTypes.SKY_COVERAGE:
-                    cloudiness = get_clouds(coords, tag_date)
-                    if 0 <= cloudiness <= 10:
-                        response += "Céu limpo"
-                    elif 10 < cloudiness <= 30:
-                        response += "Céu predominantemente limpo"
-                    elif 30 < cloudiness <= 60:
-                        response += "Céu parcialmente nublado"
-                    elif 60 < cloudiness <= 90:
-                        response += "Céu predominantemente nublado"
-                    elif 90 < cloudiness <= 100:
-                        response += "Céu nublado"
-
-                elif tag is WeatherTypes.SUNRISE:
-                    hour, minute, second = get_sunrise(coords)
-                    response += f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
-
-                elif tag is WeatherTypes.SUNSET:
-                    hour, minute, second = get_sunset(coords)
-                    response += f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
-                    
-                return response
+            weather_rqst(chat_id, qtype, location)
     except APICallError:
         return '*Parece que a base de dados de tempo está offline, tente novamente em algum tempo*'
     except MoreThanFiveDaysException as e:
@@ -194,70 +107,126 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
         return str(e)
 
 
-def set_daily_alert_time(chat_id, text):
-    try:
-        text = text.split('h')[0]
-        hour = int(text)
-        if not 0 <= hour <= 23:
-            raise ValueError
-    except ValueError:
-        raise ValueError("Você deve inserir um horário como um número entre 0h e 23h.")
+def not_weather_rqst(text: str, chat_id: str, message_id: int, qtype):
+    def set_subscription():
+        evaluate_subscription(chat_id, text)
 
-    update(chat_id, {UserDataKeys.WEATHER_DAILY_ALERT: hour})
-    remove_key(chat_id, UserDataKeys.STATE)
-    markdown_message(chat_id, f"*Alerta diário configurado*: você receberá um resumo das 24h seguintes às {hour}h")
+    def subscribing_daily_alert_place():
+        if set_alert_location(chat_id, text):
+            update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
+            markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações diariamente")
 
-
-def evaluate_location(msg):
-    chat_id, message_id = get_message_id(msg)
-    coords = {"lat": msg["location"]["latitude"], "lng": msg["location"]["longitude"]}
-    chat_id = str(chat_id)
-
-    user_state = state(chat_id)
-    response = None
-
-    if user_state is UserStateKeys.SUBSCRIBING_PLACE:
-        evaluate_subscription(chat_id, f'{coords["lat"]} {coords["lng"]}')
-
-    elif user_state is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
-        delete_message((chat_id, message_id))
-        if set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}'):
+    def subscribing_trigger_alert_place():
+        if set_alert_location(chat_id, text):
             remove_key(chat_id, UserDataKeys.STATE)
             set_notification_triggers((chat_id, message_id))
-    elif user_state is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
-        delete_message((chat_id, message_id))
-        if set_alert_location(chat_id, f'{coords["lat"]} {coords["lng"]}'):
-            update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
-            markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
-                                      "diariamente")
 
-    else:
-        response = evaluate_text(str(coords["lat"]) + " " + str(coords["lng"]), chat_id, message_id)
+    def expecting_trigger_temperature():
+        set_not_rain_trigger(chat_id, text, flavor="temp")
 
-    if response:
-        return response
+    def expecting_trigger_clouds():
+        set_not_rain_trigger(chat_id, text, flavor="clouds")
+
+    def expecting_trigger_humid():
+        set_not_rain_trigger(chat_id, text, flavor="humid")
+
+    def expecting_daily_hour():
+        set_daily_alert_time(chat_id, text)
+
+    def initial_message():
+        start(chat_id)
+
+    def help_request():
+        call_help(chat_id, text)
+
+    def set_alarm():
+        set_notification_type((chat_id, message_id))
+
+    def cancel():
+        remove_key(chat_id, UserDataKeys.STATE) and markdown_message(chat_id, "*Processo cancelado*")
+
+    key_fn = {
+        'SET_SUBSCRIPTION': set_subscription,
+        'SUBSCRIBING_DAILY_ALERT_PLACE': subscribing_daily_alert_place,
+        'SUBSCRIBING_TRIGGER_ALERT_PLACE': subscribing_trigger_alert_place,
+        'EXPECTING_TRIGGER_TEMPERATURE': expecting_trigger_temperature,
+        'EXPECTING_TRIGGER_CLOUDS': expecting_trigger_clouds,
+        'EXPECTING_TRIGGER_HUMID': expecting_trigger_humid,
+        'EXPECTING_DAILY_HOUR': expecting_daily_hour,
+        'INITIAL_MESSAGE': initial_message,
+        'HELP_REQUEST': help_request,
+        'SET_ALARM': set_alarm,
+        'CANCEL': cancel
+    }
+    key_fn[qtype.name]()
 
 
-def set_alert_location(chat_id, location):
-    """
-    :param chat_id: the chat_id talking to the bot
-    :param location: the location sent, may be a dictionary with 'lat' and 'lng' keys or a string
-    :return: None
+def weather_rqst(chat_id: str, qtype, location):
+    full_adress = location[0]
+    coords = location[1]
+    pairs = qtype
 
-    This method's ethos is to ensure that the user sends a valid location to the alerts subscribing system.
+    def weather_fn():
+        weather = get_weather_description(coords, tag_date)
+        temp = get_temperature(coords, tag_date)
 
-    """
-    try:
-        address, coords = get_user_address_by_name(location)
-        update(chat_id, {UserDataKeys.NOTIFICATION_COORDS: coords})
-        markdown_message(chat_id, f"""
-Certo, o local configurado para receber notificações é:
-*{address}*
-""")
-        return True
-    except LocationNotFoundException:
-        markdown_message(chat_id, "Insira um local válido")
-        return False
+        return f'{weather.capitalize()}\n' \
+            f'Temperatura no horário pedido: {temp:.1f}°C'
+
+    def temperature():
+        temp = get_temperature(coords, tag_date)
+        return f'Temperatura no horário pedido: {temp:.1f}°C'
+
+    def humidity_fn():
+        humidity = get_humidity(coords, tag_date)
+        return f'Lá o ar está com {humidity}% de umidade'
+
+    def rain():
+        rainy = get_rain(coords, tag_date)
+        return f'{"Com" if rainy else "Sem"} chuva para este horário'
+
+    def sky_coverage():
+        cloudiness = get_clouds(coords, tag_date)
+        if 0 <= cloudiness <= 10:
+            return "Céu limpo"
+        elif 10 < cloudiness <= 30:
+            return "Céu predominantemente limpo"
+        elif 30 < cloudiness <= 60:
+            return "Céu parcialmente nublado"
+        elif 60 < cloudiness <= 90:
+            return "Céu predominantemente nublado"
+        elif 90 < cloudiness <= 100:
+            return "Céu nublado"
+
+    def sunrise():
+        hour, minute, second = get_sunrise(coords)
+        return f'O sol irá nascer às *{hour}h{minute}min{second}s* do horário de Brasília'
+
+    def sunset():
+        hour, minute, second = get_sunset(coords)
+        return f'O sol irá se pôr às *{hour}h{minute}min{second}s* do horário de Brasília'
+
+    key_weather_fn = {
+        'WEATHER': weather_fn,
+        'TEMPERATURE': temperature,
+        'HUMIDITY': humidity_fn,
+        'RAIN': rain,
+        'SKY_COVERAGE': sky_coverage,
+        'SUNRISE': sunrise,
+        'SUNSET': sunset
+    }
+
+    assert pairs
+
+    markdown_message(chat_id, "*Certo, encontrei este endereço:*")
+    markdown_message(chat_id, full_adress)
+
+    for pair in pairs:
+        tag = pair[0]
+        tag_date = pair[1]
+        response = f'{date_string(tag_date)}'
+        response += key_weather_fn[tag.name]
+        markdown_message(chat_id, response)
 
 
 def on_callback_query(callback_query):
@@ -388,72 +357,6 @@ def get_message_id(msg):
     return message_id
 
 
-def call_help(chat_id, text):
-
-    args = text.lower().strip().split()
-
-    main_help_message = u"""
-Olá, você está usando o bot TeleWeather!
-Usando dados abertos da API do OpenWeather, este bot te dá funcionalidades climáticas como:
-*1 - Previsão do tempo*
-*2 - Inscrição para notificações programadas*
-*3 - Ajuda doméstica ao informar se sua roupa pode ser lavada e quando está seca*
-*4 - Informações climáticas diversas*
-    
-Para saber mais sobre alguma funcionalidade peça ajuda!
-ex.: *ajuda 1* (isso dará ajuda sobre a previsão do tempo, pois é o item 1)
-ou   *help previsao* (o mesmo que "ajuda 1")
-"""
-
-    helptype = None
-
-    if args and len(args) > 1 and ('ajuda' in args or 'help' in args):
-        for arg in args:
-            if arg in ['1', 1, 'previsão', 'previsao', 'tempo', 'prever']:
-                helptype = '1'
-            elif arg in ['2', 2, 'inscrição', 'inscricao', 'inscriçao', 'inscricão', 'inscrever', 'notificar',
-                         'notificação']:
-                helptype = '2'
-            elif arg in ['3', 3, 'roupa', 'lavar']:
-                helptype = '3'
-            elif arg in ['4', 4, 'informações', 'informaçoes', 'informacões', 'informacoes', 'info', 'infos']:
-                helptype = '4'
-
-    if helptype == '1':
-        simple_message(chat_id, 'ajuda pro 1')
-
-    elif helptype == '2':
-        simple_message(chat_id, 'ajuda pro 2')
-
-    elif helptype == '3':
-        simple_message(chat_id, 'ajuda pro 3')
-
-    elif helptype == '4':
-        simple_message(chat_id, 'ajuda pro 4')
-
-    else:
-        markdown_message(chat_id, main_help_message)
-
-    # TODO escrever mensagens de ajuda para cada item especificado
-
-
-def start(chat_id):
-    initial_response_text = """
-    Olá!!
-    Você está iniciando o TeleWeatherBot!! Bem vindo!!
-    Use os seguintes comandos para me pedir algo:
-    /help - Lista de comandos disponíveis
-    /cadastro - Efetuar cadastro para poder aproveitar mais as funcionalidades
-    /clima <Cidade> - Falar como está o clima da Cidade no momento
-    """
-
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='Iniciar Cadastro', callback_data='cadastro')],
-        [InlineKeyboardButton(text='Exibir comandos disponíveis', callback_data='comandos')]
-    ])
-    simple_message(chat_id, initial_response_text, reply_markup=keyboard)
-
-
 def evaluate_subscription(chat_id, text):
     if not state(chat_id):
         update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_NAME})
@@ -491,31 +394,3 @@ Caso queira alterar os dados basta recomeçar o cadastro.
 Digite "*ajuda cadastro*" para obter mais informações sobre as funcionalidades especiais.
 
 """)
-
-
-def receiver(data):
-    """Receives data from Lambda
-    """
-
-    # Handlers
-    update_types = {
-        'message': on_chat_message,
-        # 'edited_message': _edited_message,
-        # 'channel_post': _channel_post,
-        # 'edited_channel_post': _edited_channel_post,
-        # 'inline_query': _inline_query,
-        # 'chosen_inline_result': _chosen_inline_result,
-        'callback_query': on_callback_query
-    }
-
-    update_type = 0
-
-    # Get update info
-    for key in data:
-        if key == 'update_id':
-            pass
-        else:
-            update_type = key
-
-    # Call correct handler passing correct values
-    return update_types[update_type](data[update_type])
