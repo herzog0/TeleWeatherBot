@@ -84,12 +84,22 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
 
         if not location:
 
-            if qtype is FunctionalTypes.SET_SUBSCRIPTION or isinstance(qtype, UserStateKeys):
-                if qtype is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
-                    if set_alert_location(chat_id, text):
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
-                        markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
-                                                  "diariamente")
+            key_fn = {
+                'SET_SUBSCRIPTION': 'evaluate_subscription(chat_id, text)',
+                'SUBSCRIBING_DAILY_ALERT_PLACE': 'set_alert_location(chat_id, text) and '
+                                                 'update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR});'
+                                                 'markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações diariamente")',
+                'SUBSCRIBING_TRIGGER_ALERT_PLACE':
+                'EXPECTING_TRIGGER_TEMPERATURE':
+                'EXPECTING_TRIGGER_CLOUDS':
+                'EXPECTING_TRIGGER_HUMID':
+                'EXPECTING_DAILY_HOUR':
+                'INITIAL_MESSAGE':
+                'HELP_REQUEST':
+                'SET_ALARM':
+                'CANCEL':
+            }
+
                 elif qtype is UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE:
                     if set_alert_location(chat_id, text):
                         remove_key(chat_id, UserDataKeys.STATE)
@@ -102,8 +112,6 @@ def evaluate_text(text: str, chat_id: str, message_id: int):
                     set_not_rain_trigger(chat_id, text, flavor='humid')
                 elif qtype is UserStateKeys.EXPECTING_DAILY_HOUR:
                     set_daily_alert_time(chat_id, text)
-                else:
-                    evaluate_subscription(chat_id, text)
 
             elif qtype is FunctionalTypes.INITIAL_MESSAGE:
                 #
