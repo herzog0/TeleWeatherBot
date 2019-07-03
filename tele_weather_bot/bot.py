@@ -241,108 +241,95 @@ def on_callback_query(callback_query):
 
     query_id = str(query_id)
 
-    # Navigate the callback if it came from the notifications setter
-    if query_data.split('.')[0] == 'notification':
+    query_data = query_data.split('.')
 
-        info = query_data.split('.')
-        if info[1] == 'type':
+    def not_type():
+        key_state_types = {
+            'daily': UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE,
+            'trigger': UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE
+        }
+        update(chat_id, {UserDataKeys.STATE: key_state_types[query_data[-1]]})
+        if query_data[-1] == 'daily':
+            set_notification_location(message_id, query_id)
+        else:
+            set_notification_location(message_id, query_id, by_trigger=True)
 
-            if info[2] == 'daily':
-                update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE})
-                set_notification_location(message_id, query_id)
+    def not_unsubs():
+        alert_keys = {
+            'daily': UserDataKeys.WEATHER_DAILY_ALERT,
+            'trigger': UserDataKeys.WEATHER_TRIGGER_ALERT
+        }
+        remove_key(chat_id, alert_keys[query_data[-1]])
+        if not has_alerts(chat_id):
+            remove_key(chat_id, UserDataKeys.ALERT)
+            remove_key(chat_id, UserDataKeys.NOTIFICATION_COORDS)
+        if query_data[-1] == 'daily':
+            set_notification_type(message_id, query_id, un_daily=True)
+        else:
+            set_notification_type(message_id, query_id, un_trig=True)
 
-            elif info[2] == 'trigger':
-                update(chat_id, {UserDataKeys.STATE: UserStateKeys.SUBSCRIBING_TRIGGER_ALERT_PLACE})
-                set_notification_location(message_id, query_id, by_trigger=True)
+    def not_set_usesubsplace():
+        set_alert_location(chat_id, subscribed_coords(chat_id))
+        if state(chat_id) is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
+            update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
+            markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
+                                      "diariamente")
+        else:
+            remove_key(chat_id, UserDataKeys.STATE)
+            set_notification_triggers(message_id, query_id)
+        answer_callback_query(query_id)
 
-        elif info[1] == 'unsubscribe':
+    def not_set_goback():
+        remove_key(chat_id, UserDataKeys.STATE)
+        set_notification_type(message_id, query_id)
 
-            if info[2] == 'daily':
-                remove_key(chat_id, UserDataKeys.WEATHER_DAILY_ALERT)
-                if not has_alerts(chat_id):
-                    remove_key(chat_id, UserDataKeys.ALERT)
-                    remove_key(chat_id, UserDataKeys.NOTIFICATION_COORDS)
-                set_notification_type(message_id, query_id, un_daily=True)
+    def not_set_trigflavor():
+        update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: query_data[-1]})
+        if query_data[-1] == 'rain':
+            set_trigger_condition(message_id, query_id, is_rain=True)
+        else:
+            set_trigger_condition(message_id, query_id)
 
-            elif info[2] == 'trigger':
-                remove_key(chat_id, UserDataKeys.WEATHER_TRIGGER_ALERT)
-                if not has_alerts(chat_id):
-                    remove_key(chat_id, UserDataKeys.ALERT)
-                    remove_key(chat_id, UserDataKeys.NOTIFICATION_COORDS)
-                set_notification_type(message_id, query_id, un_trig=True)
+    def not_set_trigcond():
+        key_state_flavors = {
+            'temperature': UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE,
+            'clouds': UserStateKeys.EXPECTING_TRIGGER_CLOUDS,
+            'humidity': UserStateKeys.EXPECTING_TRIGGER_HUMID,
+        }
+        flavor = trigger_flavor(chat_id)
+        update(chat_id, {UserDataKeys.STATE: key_state_flavors[flavor],
+                         UserDataKeys.WEATHER_ALERT_COND: query_data.split('.')[-1]})
+        msg = "Envie um valor entre 0 e 100 para porcentagens"
+        if flavor == 'temperature':
+            msg = "Envie um valor entre -20 e 50 para temperatura"
+        markdown_message(chat_id, msg)
 
-        elif info[1] == 'set':
+    def not_set_trigcond_rain():
+        cond = query_data[-1]
+        bool_rain = cond == 'rain'
+        update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: cond})
+        remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
+        markdown_message(chat_id, f"Gatilho configurado, você saberá quando {'*não*' if bool_rain else ''} for chover")
+        answer_callback_query(query_id)
 
-            if info[2] == 'use_subscribed_place':
-                set_alert_location(chat_id, subscribed_coords(chat_id))
-                if state(chat_id) is UserStateKeys.SUBSCRIBING_DAILY_ALERT_PLACE:
-                    update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_DAILY_HOUR})
-                    markdown_message(chat_id, "Agora, envie o horário em que deseja receber as notificações "
-                                              "diariamente")
-                else:
-                    remove_key(chat_id, UserDataKeys.STATE)
-                    set_notification_triggers(message_id, query_id)
-                answer_callback_query(query_id)
+    not_fn = {
+        'notification.type.daily': not_type,
+        'notification.type.trigger': not_type,
+        'notification.unsubscribe.daily': not_unsubs,
+        'notification.unsubscribe.trigger': not_unsubs,
+        'notification.set.use_subscribed_place': not_set_usesubsplace,
+        'notification.set.go_back': not_set_goback,
+        'notification.set.trig_flavor.temperature': not_set_trigflavor,
+        'notification.set.trig_flavor.rain': not_set_trigflavor,
+        'notification.set.trig_flavor.clouds': not_set_trigflavor,
+        'notification.set.trig_flavor.humidity': not_set_trigflavor,
+        'notification.set.trig_cond.lt': not_set_trigcond,
+        'notification.set.trig_cond.gt': not_set_trigcond,
+        'notification.set.trig_cond.rain': not_set_trigcond_rain,
+        'notification.set.trig_cond.not_rain': not_set_trigcond_rain,
+    }
 
-            elif info[2] == 'go_back':
-                remove_key(chat_id, UserDataKeys.STATE)
-                set_notification_type(message_id, query_id)
-
-            elif info[2] == 'trig_flavor':
-                if info[3] == 'temperature':
-                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "temperature"})
-                    set_trigger_condition(message_id, query_id)
-                elif info[3] == 'clouds':
-                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "clouds"})
-                    set_trigger_condition(message_id, query_id)
-                elif info[3] == 'humidity':
-                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "humidity"})
-                    set_trigger_condition(message_id, query_id)
-                elif info[3] == 'rain':
-                    update(chat_id, {UserDataKeys.WEATHER_ALERT_FLAVOR: "rain"})
-                    set_trigger_condition(message_id, query_id, is_rain=True)
-
-            elif info[2] == 'trig_cond':
-                flavor = trigger_flavor(chat_id)
-                if flavor == 'temperature':
-                    if info[3] == 'lt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
-                    elif info[3] == 'gt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_TEMPERATURE,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
-                    markdown_message(chat_id, "Envie um valor entre -20 e 50 para temperatura")
-
-                elif flavor == 'clouds':
-                    if info[3] == 'lt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_CLOUDS,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
-                    elif info[3] == 'gt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_CLOUDS,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
-                    markdown_message(chat_id, "Envie um valor entre 0 e 100 para porcentagens")
-
-                elif flavor == 'humidity':
-                    if info[3] == 'lt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_HUMID,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'lt'})
-                    elif info[3] == 'gt':
-                        update(chat_id, {UserDataKeys.STATE: UserStateKeys.EXPECTING_TRIGGER_HUMID,
-                                         UserDataKeys.WEATHER_ALERT_COND: 'gt'})
-                    markdown_message(chat_id, "Envie um valor entre 0 e 100 para porcentagens")
-
-                elif flavor == 'rain':
-                    if info[3] == 'rain':
-                        update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'rain'})
-                        remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
-                        markdown_message(chat_id, "Gatilho configurado, você saberá quando for chover")
-                        remove_key(chat_id, UserDataKeys.STATE)
-                    elif info[3] == 'not_rain':
-                        update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: 'not_rain'})
-                        remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
-                        markdown_message(chat_id, "Gatilho configurado, você saberá quando *não* for chover")
-                        remove_key(chat_id, UserDataKeys.STATE)
-                answer_callback_query(query_id)
+    not_fn[query_data]()
 
 
 def get_message_id(msg):
