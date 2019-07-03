@@ -159,6 +159,7 @@ def update(user_chat_id, args_dict):
     except NotFound:
         __users.document(user_chat_id).set({})
         __users.document(user_chat_id).update(update_dict)
+    return True
 
 
 def remove_key(user_chat_id, key: UserDataKeys):

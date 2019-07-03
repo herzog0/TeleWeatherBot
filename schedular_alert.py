@@ -72,9 +72,10 @@ def get_users_with_alerts():
                     # o valor estipulado
                     # formato: {"FLAVOR": "temp/cloud/humid", "less_than": int/float / "greater_than": int/float}
                     #          {"FLAVOR": "rain", "cond": "true"/"false"}
-                    forecast_info = get_forecast_info(user_alert["TRIGGER"], user["NOTIFICATION_COORDS"])
-                    if forecast_info:
-                        send_message(chat_id, forecast_info)
+                    if datetime.now().hour % 3 == 0:
+                        forecast_info = get_forecast_info(user_alert["TRIGGER"], user["NOTIFICATION_COORDS"])
+                        if forecast_info:
+                            send_message(chat_id, forecast_info)
     except KeyError:
         return None
 

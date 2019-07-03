@@ -20,7 +20,7 @@ class WeatherTypes(Enum):
 
     # testes de tempo
 
-    IS_RAINY = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
+    RAIN = ['chover', 'chuva', 'chove', 'choveu', 'choverá', 'chovera', 'pingar', 'molhar', 'chovendo',
                 'chuvendo', 'molhando', 'pingando']
 
     SKY_COVERAGE = ['nublado', 'nuvem', 'sombra', 'céu', 'ceu']

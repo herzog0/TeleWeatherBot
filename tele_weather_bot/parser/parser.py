@@ -46,9 +46,8 @@ def less_than_five_days(value, m=False, w=False):
         # fim do mês seguinte e portanto, é maior que 5 dias.
 
         if not 1 <= value <= monthrange(now.year, now.month)[1]:
-            raise MoreThanFiveDaysException(
-                f"*O dia {value} não existe ou está muito distante*\n"
-                f"Escolha uma data no máximo 5 dias à frente")
+            raise MoreThanFiveDaysException(f"*O dia {value} não existe ou está muito distante*\n"
+                                            f"Escolha uma data no máximo 5 dias à frente")
 
     if 0 <= value - today <= 5:
         delta_days = value - today
