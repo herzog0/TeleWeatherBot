@@ -313,7 +313,7 @@ def on_callback_query(callback_query):
         bool_rain = cond == 'rain'
         update(chat_id, {UserDataKeys.WEATHER_ALERT_COND: cond})
         remove_key(chat_id, UserDataKeys.WEATHER_ALERT_VALUE)
-        markdown_message(chat_id, f"Gatilho configurado, você saberá quando {'*não*' if bool_rain else ''} for chover")
+        markdown_message(chat_id, f"Gatilho configurado, você saberá quando{'*não*' if not bool_rain else ''} for chover")
         answer_callback_query(query_id)
 
     not_fn = {
