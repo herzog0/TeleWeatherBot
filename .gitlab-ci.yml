@@ -6,4 +6,5 @@ before_script:
 test:
   stage: test
   script:
-    - python3 tests/test_parser.py
+    - cd tests/
+    - python3 test_parser.py
