@@ -6,13 +6,13 @@ import telepot
 from datetime import datetime, timedelta
 from pyowm.exceptions.api_call_error import APICallError
 
-from tele_weather_bot.alerts.config_flow_functions import set_not_rain_trigger, set_daily_alert_time, set_alert_location
+from tele_weather_bot.alerts.condition_set import set_not_rain_trigger, set_daily_alert_time, set_alert_location
 from tele_weather_bot.trivials.trivial_commands import call_help, start
 from .weather import NotFoundError
 from .weather.api import get_rain, get_weather_description, get_temperature, get_humidity, \
     get_clouds, get_sunrise, get_sunset
 from .parser import parser, CouldNotUnderstandException, MoreThanFiveDaysException
-from .alerts.notification import set_notification_type, set_notification_location, set_trigger_condition, \
+from .alerts.keyboards import set_notification_type, set_notification_location, set_trigger_condition, \
     set_notification_triggers
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys

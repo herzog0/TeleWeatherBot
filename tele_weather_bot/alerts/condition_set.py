@@ -43,7 +43,8 @@ def set_daily_alert_time(chat_id, text):
 
     update(chat_id, {UserDataKeys.WEATHER_DAILY_ALERT: hour})
     remove_key(chat_id, UserDataKeys.STATE)
-    markdown_message(chat_id, f"*Alerta diário configurado*: você receberá um resumo das 24h seguintes às {hour}h")
+    markdown_message(chat_id, f"*Alerta diário configurado*: você receberá todo dia, às {hour}h, um resumo das 24h "
+                              f"seguintes")
 
 
 def set_alert_location(chat_id, location):
