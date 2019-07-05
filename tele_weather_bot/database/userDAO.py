@@ -15,12 +15,13 @@ def initialize_firebase():
         pass
 
 
-def __get_value(user_chat_id: str, key: str):
+def __get_value(user_chat_id, key: str):
     """
     :param user_chat_id: chat_id talking to the bot
     :param key: retrieve value from this key, or key path
     :return: retrieved value or None
     """
+    user_chat_id = str(user_chat_id)
     initialize_firebase()
     try:
         global __users
@@ -35,7 +36,7 @@ def __get_value(user_chat_id: str, key: str):
         return None
 
 
-def name(user_chat_id: str):
+def name(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: user name or None
@@ -43,7 +44,7 @@ def name(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.NAME.value)
 
 
-def email(user_chat_id: str):
+def email(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: user email or None
@@ -51,7 +52,7 @@ def email(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.EMAIL.value)
 
 
-def subscribed_coords(user_chat_id: str):
+def subscribed_coords(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: coordinates for subscribed place or None
@@ -59,7 +60,7 @@ def subscribed_coords(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.SUBSCRIBED_COORDS.value)
 
 
-def notification_coords(user_chat_id: str):
+def notification_coords(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: coordinates set for notification or None
@@ -67,7 +68,7 @@ def notification_coords(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.NOTIFICATION_COORDS.value)
 
 
-def last_update(user_chat_id: str):
+def last_update(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: user's last update time of the form firestore.SERVER_TIMESTAMP
@@ -75,7 +76,7 @@ def last_update(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.LAST_UPDATE.value)
 
 
-def state(user_chat_id: str):
+def state(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: user state or None
@@ -83,29 +84,38 @@ def state(user_chat_id: str):
     return __get_value(user_chat_id, UserDataKeys.STATE.value)
 
 
-def has_trigger(user_chat_id: str):
+def has_trigger(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: return true if user has subscribed a trigger
     """
     alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    if not alert:
+        return False
     return True if alert.get("TRIGGER", None) else False
 
 
-def has_daily_alert(user_chat_id: str):
+def has_daily_alert(user_chat_id):
     """
     :param user_chat_id: chat_id talking to the bot
     :return: return true if user has subscribed a daily alert
     """
     alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
-    return True if alert.get("TRIGGER", None) else False
+    if not alert:
+        return False
+    return True if alert.get("DAILY", None) else False
 
 
-def trigger_flavor(user_chat_id: str):
+def has_alerts(user_chat_id):
+    alert = __get_value(user_chat_id, UserDataKeys.ALERT.value)
+    return True if len(alert) > 0 else False
+
+
+def trigger_flavor(user_chat_id):
     return __get_value(user_chat_id, "ALERT.TRIGGER.FLAVOR")
 
 
-def update(user_chat_id: str, args_dict):
+def update(user_chat_id, args_dict):
     """
     :param user_chat_id: chat_id talking to the bot
 
@@ -124,6 +134,7 @@ def update(user_chat_id: str, args_dict):
     This makes a cleaner and less error susceptible code.
 
     """
+    user_chat_id = str(user_chat_id)
     initialize_firebase()
     update_dict = {}
     for key, value in args_dict.items():
@@ -148,9 +159,10 @@ def update(user_chat_id: str, args_dict):
     except NotFound:
         __users.document(user_chat_id).set({})
         __users.document(user_chat_id).update(update_dict)
+    return True
 
 
-def remove_key(user_chat_id: str, key: UserDataKeys):
+def remove_key(user_chat_id, key: UserDataKeys):
     """
     :param user_chat_id: chat_id talking to the bot
     :param key: field to be removed
@@ -160,6 +172,7 @@ def remove_key(user_chat_id: str, key: UserDataKeys):
     Use it whenever a field is not going to be used anymore. Don't keep None values in the database fields.
 
     """
+    user_chat_id = str(user_chat_id)
     initialize_firebase()
     try:
         global __users

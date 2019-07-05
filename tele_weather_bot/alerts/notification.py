@@ -1,10 +1,11 @@
 from telepot.namedtuple import InlineKeyboardMarkup, InlineKeyboardButton
 from ..database.userDAO import subscribed_coords, has_trigger, has_daily_alert
-from ..communication.send_to_user import edit_message, answer_callback_query, inline_keyboard_message
+from ..communication.send_to_user import edit_message, answer_callback_query, inline_keyboard_message, simple_message
 
 
-def set_notification_type(message_id, query_id=False):
+def set_notification_type(message_id, query_id=False, un_daily=False, un_trig=False):
     choose_type = """Escolha o tipo de notificação que deseja configurar"""
+    query_msg = ""
 
     daily_notf = InlineKeyboardButton(text='Notificação diária',
                                       callback_data='notification.type.daily')
@@ -12,37 +13,39 @@ def set_notification_type(message_id, query_id=False):
     trigger_notf = InlineKeyboardButton(text='Notificação por gatilho',
                                         callback_data='notification.type.trigger')
     
-    unsubs_daily = InlineKeyboardButton(text='*(Descadastrar)*Notificação diária',
+    unsubs_daily = InlineKeyboardButton(text='(Descadastrar)\nNotificação diária',
                                         callback_data='notification.unsubscribe.daily')
     
-    unsubs_trigger = InlineKeyboardButton(text='*(Descadastrar)*Notificação por gatilho',
+    unsubs_trigger = InlineKeyboardButton(text='(Descadastrar)\nNotificação por gatilho',
                                           callback_data='notification.unsubscribe.trigger')
     
     if len(message_id) > 1:
         chat_id = message_id[0]
     else:
         chat_id = message_id
-        
-    # if has_trigger(chat_id):
-    #     trigger_notf = unsubs_trigger
-    #
-    # if has_daily_alert(chat_id):
-    #     daily_notf = unsubs_daily
-    #
+
+    if un_daily:
+        query_msg = "Alerta diário descadastrado"
+    if un_trig:
+        query_msg = "Alerta por gatilho descadastrado"
+
+    if has_trigger(chat_id):
+        trigger_notf = unsubs_trigger
+
+    if has_daily_alert(chat_id):
+        daily_notf = unsubs_daily
+
     keyboard = InlineKeyboardMarkup(inline_keyboard=[[daily_notf], [trigger_notf]])
 
     if query_id:
         edit_message(message_id, choose_type, keyboard)
-        answer_callback_query(query_id)
+        answer_callback_query(query_id, query_msg)
     else:
         inline_keyboard_message(chat_id, choose_type, keyboard)
 
 
-def set_notification_location(message_id, by_trigger=False):
+def set_notification_location(message_id, query_id, by_trigger=False):
     place = subscribed_coords(str(message_id[0]))
-#     msg_edit = f"""
-# {"*Atenção*: você já possui um alerta por gatilho configurado! Ao cadastrar outro, o primeiro será desconsiderado."
-#     if (by_trigger and has_trigger(message_id[0])) else ""}
     msg_edit = f"""
 *Certo!*
 Você escolheu receber notificações {'por gatilho' if by_trigger else 'diárias'} sobre o clima de *algum* local.
@@ -67,9 +70,10 @@ Nos diga uma localização sobre a qual você deseja receber notícias.
         edit_message(message_id, msg_edit, keyboard_cool)
     else:
         edit_message(message_id, msg_edit, keyboard_boring)
+    answer_callback_query(query_id)
 
 
-def set_notification_triggers(message_id):
+def set_notification_triggers(message_id, query_id=False):
     msg = """
 Agora você precisa escolher a *intenção do gatilho*, ele será relacionado a qual tipo de previsão?
 *Atenção*: caso um gatilho seja disparado, você receberá notificações aproximadamente:
@@ -93,9 +97,11 @@ Agora você precisa escolher a *intenção do gatilho*, ele será relacionado a 
     else:
         chat_id = message_id
     inline_keyboard_message(chat_id, msg, keyboard)
+    if query_id:
+        answer_callback_query(query_id)
 
 
-def set_trigger_condition(message_id, is_rain=False):
+def set_trigger_condition(message_id, query_id, is_rain=False):
     prefix = f"""
 Perfeito!
 Agora, note que:
@@ -140,3 +146,4 @@ Baseado nisto, escolha se deseja disparar o gatilho quando for ou quando *não* 
     else:
         chat_id = message_id
         inline_keyboard_message(chat_id, msg, keyboard)
+    answer_callback_query(query_id)
