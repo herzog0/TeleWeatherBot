@@ -1,8 +1,15 @@
+import sys
+from pathlib import Path
+current_path = Path().resolve()
+abs_path = str(current_path.parent)
+sys.path.append(abs_path)
 from tele_weather_bot.parser.parser import find_hour, find_date, MoreThanFiveDaysException, week_days, \
-    find_tag_date_pairs
+    find_tag_date_pairs, address
 from datetime import datetime, timedelta
 from tele_weather_bot.parser.question_keys import WeatherTypes
 import unittest
+
+from unittest.mock import patch
 
 
 class TestParser(unittest.TestCase):
@@ -49,6 +56,22 @@ class TestParser(unittest.TestCase):
         tag_date_origin = [tag, '', date, date, '', tag, '', '', date]
 
         self.assertEqual(find_tag_date_pairs(tag_date_origin), tag_date_expected_result)
+
+    def test_address(self):
+        with patch('tele_weather_bot.google_maps.geocode_functions.googlemaps'):
+            with patch('tele_weather_bot.google_maps.geocode_functions.geocode') as geo_mock:
+                geo_mock.return_value = [
+                    {
+                        "formatted_address": "campinas_test",
+                        "geometry": {
+                            "location": {
+                                "lat": "lat mock", "lng": "lng mock"
+                            }
+                        }
+                    }
+                ]
+
+                self.assertEqual(address("campinas"), ("campinas_test", {"lat": "lat mock", "lng": "lng mock"}))
 
 
 def test_all():
