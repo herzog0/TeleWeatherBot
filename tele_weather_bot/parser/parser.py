@@ -134,6 +134,8 @@ def parse(chat_id: str, text: str) -> tuple:
 
     # Se inseriu comando funcional
     for functional_type in FunctionalTypes:
+        if any(word in FunctionalTypes.HELP_REQUEST.value for word in words):
+            return FunctionalTypes.HELP_REQUEST, None
         if any(word in functional_type.value for word in words):
             return functional_type, None
 

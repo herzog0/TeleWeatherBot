@@ -50,3 +50,6 @@ class FunctionalTypes(Enum):
 
     # cancelar envio de localização para cadastro
     CANCEL = ['cancelar', 'cancel', '/cancelar']
+
+    # apagar cadastro
+    ERASE_SUBS = ['apagar', 'apaga', 'limpa', 'deletar']

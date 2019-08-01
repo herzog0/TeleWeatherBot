@@ -184,3 +184,16 @@ def remove_key(user_chat_id, key: UserDataKeys):
         return True
     except NotFound:
         return None
+
+
+def delete_user(user_chat_id):
+    user_chat_id = str(user_chat_id)
+    initialize_firebase()
+    try:
+        global __users
+        if not __users:
+            __users = firestore.client().collection(u'users')
+        response = __users.document(user_chat_id).delete()
+        return response
+    except KeyError:
+        return None

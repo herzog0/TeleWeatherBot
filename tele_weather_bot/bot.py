@@ -17,7 +17,7 @@ from .alerts.keyboards import set_notification_type, set_notification_location, 
 from .google_maps.geocode_functions import LocationNotFoundException, get_user_address_by_name
 from .database.user_keys import UserStateKeys, UserDataKeys
 from .database.userDAO import update, state, remove_key, name, email, subscribed_coords, last_update, trigger_flavor, \
-    has_alerts
+    has_alerts, delete_user
 
 from .communication.send_to_user import markdown_message, answer_callback_query
 
@@ -145,6 +145,10 @@ def not_weather_rqst(text: str, chat_id: str, message_id: int, qtype):
     def cancel():
         remove_key(chat_id, UserDataKeys.STATE) and markdown_message(chat_id, "*Processo cancelado*")
 
+    def erase_subscription():
+        msg = "Suas informações foram apagadas!" if delete_user(chat_id) else "Não há nada para apagar!"
+        markdown_message(chat_id, msg)
+
     key_fn = {
         'SET_SUBSCRIPTION': set_subscription,
         'SUBSCRIBING_NAME': set_subscription,
@@ -159,7 +163,8 @@ def not_weather_rqst(text: str, chat_id: str, message_id: int, qtype):
         'INITIAL_MESSAGE': initial_message,
         'HELP_REQUEST': help_request,
         'SET_ALARM': set_alarm,
-        'CANCEL': cancel
+        'CANCEL': cancel,
+        'ERASE_SUBS': erase_subscription
     }
     key_fn[qtype.name]()
 
